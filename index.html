@@ -1776,26 +1776,48 @@ function startVoiceInput() {
     alert("Spracheingabe wird auf diesem Gerät/Browser leider nicht unterstützt. Auf dem iPhone hilft es manchmal, die Seite direkt in Safari statt der installierten App zu öffnen.");
     return;
   }
+  const isIOS = /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isStandalone = window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+  if (isIOS && isStandalone) {
+    alert("Auf dem iPhone funktioniert die Spracheingabe in der installierten App leider nicht zuverlässig (Apple-Einschränkung). Bitte öffne die Seite einmal direkt in Safari (nicht über das Home-Bildschirm-Icon) und versuch es dort.");
+    return;
+  }
+
   const recognition = new SpeechRecognitionCtor();
   recognition.lang = "de-DE";
   recognition.continuous = false;
   recognition.interimResults = false;
 
+  // Sicherheitsnetz: falls die Erkennung (z.B. wegen einer nicht erscheinenden System-Berechtigungsabfrage)
+  // gar nicht reagiert, nach einigen Sekunden automatisch zuruecksetzen statt die Seite "haengen" zu lassen.
+  let settled = false;
+  const safetyTimeout = setTimeout(() => {
+    if (settled) return;
+    settled = true;
+    state.voiceListening = false;
+    render();
+    try { recognition.abort(); } catch (e) {}
+    alert("Die Spracheingabe hat nicht reagiert. Auf dem iPhone hilft es oft, die Seite direkt in Safari statt der installierten App zu öffnen.");
+  }, 8000);
+  const markSettled = () => { settled = true; clearTimeout(safetyTimeout); };
+
   recognition.onstart = () => { state.voiceListening = true; render(); };
-  recognition.onend = () => { state.voiceListening = false; render(); };
+  recognition.onend = () => { markSettled(); state.voiceListening = false; render(); };
   recognition.onerror = (e) => {
+    markSettled();
     state.voiceListening = false; render();
     if (e.error === "not-allowed" || e.error === "service-not-allowed") alert("Zugriff aufs Mikrofon wurde nicht erlaubt. Bitte in den Geräte-Einstellungen für den Browser freigeben.");
     else if (e.error !== "no-speech" && e.error !== "aborted") alert("Spracheingabe-Fehler: " + e.error);
   };
   recognition.onresult = (e) => {
+    markSettled();
     const transcript = e.results[0][0].transcript;
     // Bei "Zwiebeln und Tomaten und Käse" o.ä. in einzelne Eintraege auftrennen
     const parts = transcript.split(/,| und /i).map((s) => s.trim()).filter(Boolean);
     parts.forEach((part) => addManualItem(part.charAt(0).toUpperCase() + part.slice(1)));
   };
 
-  try { recognition.start(); } catch (e) { state.voiceListening = false; }
+  try { recognition.start(); } catch (e) { markSettled(); state.voiceListening = false; }
 }
 async function setManualCategory(id, category) {
   try { await sb(`shopping_list_items?id=eq.${id}`, { method: "PATCH", body: { category } }); const it = state.manualItems.find((m) => m.id === id); it.category = category; render(); }

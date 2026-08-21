@@ -1,0 +1,2134 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Rezept-App</title>
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#5B5BF6" />
+<link rel="icon" href="/icons/icon-192.png" />
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Rezepte" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FFFFFF;
+    --bg-subtle: #F7F7F8;
+    --ink: #17181C;
+    --ink-soft: #8A8C93;
+    --ink-muted: #B5B6BC;
+    --accent: #5B5BF6;
+    --accent-soft: #EEEEFE;
+    --line: #EEEEF0;
+    --danger: #E0524B;
+    --shadow: 0 1px 2px rgba(20,20,30,0.04), 0 6px 20px rgba(20,20,30,0.05);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  #app {
+    max-width: 420px;
+    margin: 0 auto;
+    min-height: 100vh;
+    position: relative;
+    padding-bottom: 90px;
+  }
+  input, button, textarea, select { font-family: inherit; }
+  button { cursor: pointer; }
+  input, textarea { outline: none; }
+  h1.page-title { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 4px; }
+  .subtitle { font-size: 14px; color: var(--ink-soft); margin-bottom: 20px; }
+  .section-label {
+    font-size: 11.5px; font-weight: 600; color: var(--ink-muted);
+    letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 10px;
+  }
+  .card {
+    background: #fff; border-radius: 16px; box-shadow: var(--shadow); overflow: hidden;
+  }
+  .pill {
+    display: inline-flex; align-items: center; border: none; border-radius: 999px;
+    padding: 7px 14px; font-size: 13px; font-weight: 500; white-space: nowrap;
+    background: var(--bg-subtle); color: var(--ink-soft); cursor: pointer;
+  }
+  .pill.active { background: var(--ink); color: #fff; }
+  .pill.subtle { background: var(--accent-soft); color: var(--accent); }
+  .search-box {
+    display: flex; align-items: center; gap: 9px; background: var(--bg-subtle);
+    border-radius: 14px; padding: 12px 14px; margin-bottom: 14px;
+  }
+  .search-box input { border: none; background: transparent; font-size: 15px; flex: 1; color: var(--ink); }
+  .btn-primary {
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: var(--accent); color: #fff; border: none; border-radius: 14px;
+    padding: 14px 0; font-size: 15px; font-weight: 600;
+  }
+  .btn-secondary {
+    width: 100%; background: var(--bg-subtle); color: var(--ink); border: none;
+    border-radius: 14px; padding: 13px 0; font-size: 14.5px; font-weight: 600;
+  }
+  .top-pad { padding: 28px 20px 100px; }
+  .recipe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .recipe-card {
+    text-align: left; background: #fff; border: 1.5px solid var(--line); border-radius: 18px;
+    overflow: hidden; box-shadow: 0 1px 2px rgba(20,20,30,0.03); padding: 0; position: relative;
+    display: flex; flex-direction: column; height: 100%;
+    transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+  }
+  .recipe-card:active { transform: scale(0.97); border-color: var(--accent); }
+  .recipe-card .thumb {
+    height: 96px; background: var(--bg-subtle); display: flex; align-items: center;
+    justify-content: center; font-size: 34px; border-bottom: 1.5px solid var(--line); flex-shrink: 0;
+  }
+  .recipe-card .body { padding: 12px 13px 13px; display: flex; flex-direction: column; flex: 1; }
+  .recipe-card .title {
+    font-size: 13.5px; font-weight: 600; line-height: 1.32; color: var(--ink);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    min-height: 2.64em; margin-bottom: 8px;
+  }
+  .recipe-card .meta { display: flex; gap: 10px; font-size: 11.5px; color: var(--ink-soft); margin-top: auto; }
+  .recipe-card .meta span { display: flex; align-items: center; white-space: nowrap; }
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 420px; background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px); border-top: 1px solid var(--line);
+    display: flex; padding: 10px 0 max(10px, env(safe-area-inset-bottom)); z-index: 10;
+  }
+  .nav-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: none; border: none; padding: 4px 0; color: var(--ink-muted);
+  }
+  .nav-btn.active { color: var(--ink); }
+  .nav-btn span { font-size: 10.5px; font-weight: 500; }
+  .nav-btn.active span { font-weight: 700; }
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(23,24,28,0.4);
+    display: flex; align-items: flex-end; z-index: 30;
+  }
+  .modal-sheet {
+    background: #fff; width: 100%; max-width: 420px; margin: 0 auto;
+    max-height: 85vh; overflow-y: auto; border-radius: 28px 28px 0 0;
+    padding: 22px 20px 32px;
+  }
+  .field-input {
+    width: 100%; border: none; border-radius: 14px; padding: 12px 15px;
+    font-size: 14px; background: var(--bg-subtle); color: var(--ink); margin-bottom: 10px;
+  }
+  .field-label { font-size: 12.5px; font-weight: 600; color: var(--ink-soft); margin: 14px 0 6px; }
+  .day-row {
+    display: flex; align-items: center; gap: 14px; background: #fff;
+    border-radius: 16px; padding: 13px 15px; box-shadow: var(--shadow); margin-bottom: 10px;
+  }
+  .day-label { width: 30px; font-size: 12.5px; font-weight: 700; color: var(--ink-muted); }
+  .checkbox {
+    width: 21px; height: 21px; border-radius: 7px; border: 1.5px solid var(--line);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    background: transparent; cursor: pointer;
+  }
+  .checkbox.checked { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .list-item {
+    display: flex; align-items: center; gap: 12px; padding: 13px 15px;
+    border-top: 1px solid var(--line);
+  }
+  .list-item:first-child { border-top: none; }
+  .icon-btn { background: none; border: none; color: var(--ink-muted); padding: 4px; display: flex; }
+  .spinner {
+    width: 28px; height: 28px; border: 3px solid var(--line); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.8s linear infinite; margin: 60px auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .error-text { color: var(--danger); font-size: 13px; margin-top: 8px; }
+  .day-chip {
+    padding: 13px 0; border-radius: 14px; border: none; background: var(--bg-subtle);
+    color: var(--ink); font-size: 13.5px; font-weight: 600; position: relative;
+  }
+  .day-chip.assigned { background: var(--accent); color: #fff; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ============ Konfiguration ============
+const SUPABASE_URL = "https://npwwyclxljlwyxcaqzlr.supabase.co";
+const IMPORT_FUNCTION_URL = SUPABASE_URL + "/functions/v1/import-recipe";
+const SUPABASE_ANON_KEY = "sb_publishable_VZ0ro6sJul4RnCfmTyQ4Sw_xBLbvNSE";
+const HOUSEHOLD_ID = "00000000-0000-0000-0000-000000000001";
+const DAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+const CATEGORY_ORDER = ["Obst & Gemüse", "Fleisch & Wurst", "Milchprodukte", "Trockenware", "Sonstiges"];
+const STORE_ROUTES = {
+  Aldi: ["Obst & Gemüse", "Trockenware", "Fleisch & Wurst", "Milchprodukte", "Sonstiges"],
+  Lidl: ["Obst & Gemüse", "Trockenware", "Milchprodukte", "Fleisch & Wurst", "Sonstiges"],
+  Edeka: ["Obst & Gemüse", "Fleisch & Wurst", "Milchprodukte", "Trockenware", "Sonstiges"],
+};
+const CATEGORY_KEYWORDS = {
+  "Obst & Gemüse": ["apfel","banane","tomate","gurke","salat","zwiebel","kartoffel","paprika","obst","gemüse","karotte","zitrone","brokkoli","spinat"],
+  "Fleisch & Wurst": ["wurst","schinken","hähnchen","huhn","hack","speck","salami","fleisch","steak","bacon"],
+  "Milchprodukte": ["milch","käse","joghurt","butter","sahne","quark","frischkäse"],
+  "Trockenware": ["nudeln","reis","mehl","zucker","salz","kaffee","tee","müsli","brot","brötchen","konserve","öl"],
+};
+function guessCategory(name) {
+  const lower = name.toLowerCase();
+  for (const [cat, kws] of Object.entries(CATEGORY_KEYWORDS)) {
+    if (kws.some((k) => lower.includes(k))) return cat;
+  }
+  return null;
+}
+const RECIPE_EMOJIS = ["🍲","🥗","🍝","🍛","🥘","🍗","🥩","🍜","🥦","🥔","🍳","🥙"];
+function emojiForTitle(title) {
+  let h = 0;
+  for (const c of title) h = (h * 31 + c.charCodeAt(0)) % RECIPE_EMOJIS.length;
+  return RECIPE_EMOJIS[h];
+}
+function formatLastCooked(dateStr) {
+  if (!dateStr) return null;
+  const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  if (days <= 0) return "Zuletzt gekocht: heute";
+  if (days === 1) return "Zuletzt gekocht: gestern";
+  if (days < 7) return `Zuletzt gekocht: vor ${days} Tagen`;
+  const weeks = Math.floor(days / 7);
+  if (weeks === 1) return "Zuletzt gekocht: vor 1 Woche";
+  if (weeks < 5) return `Zuletzt gekocht: vor ${weeks} Wochen`;
+  const months = Math.floor(days / 30);
+  if (months <= 1) return "Zuletzt gekocht: vor 1 Monat";
+  return `Zuletzt gekocht: vor ${months} Monaten`;
+}
+function scaleAmount(amount, fromServings, toServings) {
+  if (!fromServings || fromServings <= 0) return amount;
+  const scaled = (Number(amount) * toServings) / fromServings;
+  const rounded = Math.round(scaled * 10) / 10;
+  return rounded % 1 === 0 ? rounded : rounded.toFixed(1);
+}
+function parseMinutesFromText(text) {
+  const hourMatch = text.match(/(\d+)\s*(Stunden|Std\.?|h\b)/i);
+  const minMatch = text.match(/(\d+)\s*(Minuten|Min\.?)/i);
+  let total = 0;
+  if (hourMatch) total += parseInt(hourMatch[1]) * 60;
+  if (minMatch) total += parseInt(minMatch[1]);
+  return total > 0 ? total : null;
+}
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function textMentionsIngredient(text, ingredientName) {
+  // Wortgrenzen-Suche statt reiner Teilstring-Suche, damit z.B. "Ei" nicht in "Teig" anschlaegt
+  const escaped = escapeRegExp(ingredientName.trim());
+  const re = new RegExp(`(^|[^a-zA-ZäöüÄÖÜß])${escaped}([^a-zA-ZäöüÄÖÜß]|$)`, "i");
+  return re.test(text);
+}
+function extractInlineAmount(text, ingredientName) {
+  // Versucht, eine im Schritt-Text selbst genannte Menge zu finden (z.B. "50 g Zucker" im Satz),
+  // statt vorschnell die komplette Rezeptmenge zu unterstellen -- wichtig bei Zutaten, die auf
+  // mehrere Schritte aufgeteilt werden (z.B. Zucker im Teig UND im Belag).
+  const escaped = escapeRegExp(ingredientName.trim());
+  const re = new RegExp(`(\\d+[.,]?\\d*)\\s*(g|kg|ml|l|EL|TL|Stück|St\\.)?\\s{0,3}(?:${escaped})`, "i");
+  const m = text.match(re);
+  if (m) return { amount: m[1].replace(",", "."), unit: m[2] || "" };
+  return null;
+}
+
+// ============ State ============
+let state = {
+  session: null,          // { access_token, user }
+  authMode: "login",      // "login" | "signup"
+  authError: null,
+  authLoading: false,
+  loading: true,
+  tab: "recipes",
+  recipes: [],             // [{id, title, tags, servings, prep_time_minutes, ingredients:[{ingredient_id,name,amount,unit,category}]}]
+  ingredients: [],          // stammdaten
+  openRecipeId: null,
+  weekPlanId: null,
+  weekEntries: [],          // [{id, day, recipe_id}]
+  shoppingListId: null,
+  manualItems: [],          // [{id, custom_name, category, is_checked}]
+  checkedRecipeItems: {},   // client-only Haken für generierte Zutaten { ingredient_id: bool }
+  showAddRecipe: false,
+  showAddIngredient: false,
+  newIngredientDraft: null,
+  showDayPicker: false,     // recipe id currently being scheduled
+  showWeekPicker: null,     // day currently being assigned in Wochenplan-Tab
+  store: "Edeka",
+  stores: [],               // [{id, name, category_order}]
+  newStoreName: "",
+  dragCategoryFrom: null,   // { storeId, index } aktuell gezogene Kategorie
+  newRecipeDraft: null,
+  editingRecipeId: null,    // gesetzt, wenn ein bestehendes Rezept bearbeitet wird
+  editingIngredientId: null,
+  confirmDialog: null,      // { message, onConfirm }
+  uploadingPhoto: false,
+  showImportRecipe: false,
+  pantryIngredientIds: new Set(),
+  voiceListening: false,
+  ingredientCreateTarget: null,
+  importLoading: false,
+  importError: null,
+  pendingSharedUrl: null,
+  cookMode: null,          // { recipeId, stepIndex }
+  viewServings: null,
+  viewServingsRecipeId: null,
+  cookTimerSecondsLeft: null,
+  cookTimerRunning: false,
+  cookTimerLabel: "",
+  cookTimerTotalSeconds: null,
+  planningWeek: false,
+  query: "",
+  leftoverQuery: "",
+  activeTags: [],
+};
+
+function render() {
+  const app = document.getElementById("app");
+  const active = document.activeElement;
+  const isTextInput = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA") && app.contains(active);
+  const focusInfo = isTextInput ? {
+    id: active.id || null,
+    dataKey: active.getAttribute("data-focus-key"),
+    selStart: active.selectionStart,
+    selEnd: active.selectionEnd,
+  } : null;
+
+  app.innerHTML = "";
+  app.appendChild(App());
+
+  if (focusInfo && (focusInfo.id || focusInfo.dataKey)) {
+    const selector = focusInfo.id ? `#${CSS.escape(focusInfo.id)}` : `[data-focus-key="${focusInfo.dataKey}"]`;
+    const restored = app.querySelector(selector);
+    if (restored) {
+      restored.focus();
+      if (restored.setSelectionRange && typeof focusInfo.selStart === "number") {
+        try { restored.setSelectionRange(focusInfo.selStart, focusInfo.selEnd); } catch (e) {}
+      }
+    }
+  }
+}
+function el(tag, attrs = {}, children = []) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === "html") e.innerHTML = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (k === "class") e.className = v;
+    else e.setAttribute(k, v === true ? "" : v);
+  }
+  (Array.isArray(children) ? children : [children]).forEach((c) => {
+    if (c === null || c === undefined) return;
+    e.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+  });
+  return e;
+}
+const ICONS = {
+  search: `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>`,
+  clock: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`,
+  users: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+  plus: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>`,
+  x: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>`,
+  check: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>`,
+  back: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>`,
+  trash: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16z"/></svg>`,
+  edit: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>`,
+  store: `<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l1-5h16l1 5M3 9v11h18V9M3 9h18M9 21v-6h6v6"/></svg>`,
+  leaf: `<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 20A7 7 0 0 1 4 13c0-5 4-9 9-11 1 5 3 7 3 11a7 7 0 0 1-5 7z"/><path d="M4 13c3 0 6 2 7 7"/></svg>`,
+  sparkles: `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"/><circle cx="12" cy="12" r="2"/></svg>`,
+  mic: `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg>`,
+  pantry: `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7l1.5-3h15L21 7"/><rect x="3" y="7" width="18" height="14" rx="1"/><path d="M9 12h6"/></svg>`,
+  camera: `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`,
+  file: `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>`,
+  play: `<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8 5v14l11-7z"/></svg>`,
+  timer: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg>`,
+  chevronRight: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 6 6 6-6 6"/></svg>`,
+  magic: `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 4 1.5 3L20 8.5 16.5 10 15 13l-1.5-3L10 8.5 13.5 7z"/><path d="M6 14l1 2 2 1-2 1-1 2-1-2-2-1 2-1z"/><path d="M4 4l.7 1.3L6 6l-1.3.7L4 8l-.7-1.3L2 6l1.3-.7z"/></svg>`,
+  thumbsUp: `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>`,
+  thumbsDown: `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/></svg>`,
+  grip: `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>`,
+  up: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m18 15-6-6-6 6"/></svg>`,
+  down: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>`,
+  book: `<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`,
+  calendar: `<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>`,
+  basket: `<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 11 4-7M19 11l-4-7M2 11h20l-1.6 9.1a2 2 0 0 1-2 1.9H5.6a2 2 0 0 1-2-1.9L2 11z"/></svg>`,
+};
+function icon(name) { const s = el("span", { html: ICONS[name] }); s.style.display = "flex"; return s; }
+
+// ============ KI-Rezept-Import ============
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function callImportFunction(payload) {
+  const existing_ingredients = state.ingredients.map((i) => ({ name: i.name, category: i.category }));
+  const res = await fetch(IMPORT_FUNCTION_URL, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + state.session.access_token,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ ...payload, existing_ingredients }),
+  });
+  const data = await res.json();
+  if (!res.ok || data.error) throw new Error(data.error || "Unbekannter Fehler beim Import.");
+  return data;
+}
+
+// Erkannte Zutaten gegen die Stammdatenliste abgleichen; unbekannte automatisch neu anlegen
+async function resolveImportedIngredients(ingredientsFromAI) {
+  const items = [];
+  for (const ing of ingredientsFromAI) {
+    const nameLower = (ing.name || "").trim().toLowerCase();
+    if (!nameLower) continue;
+    // NUR exakte Übereinstimmung (Groß/Kleinschreibung ignoriert) -- keine Teilstring-Suche mehr,
+    // da diese z.B. "Olivenöl" faelschlich mit "Öl" zusammengelegt hat.
+    let match = state.ingredients.find((i) => i.name.toLowerCase() === nameLower);
+    if (!match) {
+      // Kategorie kommt jetzt bevorzugt direkt von der KI (praeziser als reine Stichwort-Erkennung)
+      const category = CATEGORY_ORDER.includes(ing.category) ? ing.category : (guessCategory(ing.name) || CATEGORY_ORDER[CATEGORY_ORDER.length - 1]);
+      const created = await sb("ingredients", {
+        method: "POST",
+        body: { household_id: HOUSEHOLD_ID, name: ing.name.trim(), category, unit: ing.unit || "g", is_favorite: false },
+      });
+      match = created[0];
+      state.ingredients.push(match);
+      state.ingredients.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    items.push({ ingredient_id: match.id, amount: ing.amount || 100 });
+  }
+  return items;
+}
+
+async function handleImportResult(result) {
+  const items = await resolveImportedIngredients(result.ingredients || []);
+  state.newRecipeDraft = {
+    title: result.title || "Importiertes Rezept",
+    servings: result.servings || 4,
+    prep_time_minutes: result.prep_time_minutes || "",
+    tags: (result.tags || []).join(", "),
+    instructions: result.instructions || "",
+    image_url: null,
+    source_type: "screenshot",
+    items,
+  };
+  state.editingRecipeId = null;
+  state.showImportRecipe = false;
+  state.importLoading = false;
+  state.importError = null;
+  state.showAddRecipe = true;
+  render();
+}
+
+function ImportRecipeModal() {
+  const closeModal = () => { state.showImportRecipe = false; state.importError = null; render(); };
+  const overlay = el("div", { class: "modal-overlay", style: "z-index:45;", onclick: (e) => { if (e.target === overlay && !state.importLoading) closeModal(); } });
+  const sheet = el("div", { class: "modal-sheet", onclick: (e) => e.stopPropagation() });
+
+  sheet.appendChild(el("div", { style: "display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;" }, [
+    el("div", { style: "font-size:19px; font-weight:700; letter-spacing:-0.3px;" }, "Rezept importieren"),
+    el("button", { type: "button", class: "icon-btn", onclick: closeModal, disabled: state.importLoading }, icon("x")),
+  ]));
+
+  if (state.importLoading) {
+    sheet.appendChild(el("div", { style: "padding: 40px 0; text-align:center;" }, [
+      el("div", { class: "spinner", style: "margin:0 auto 16px;" }),
+      el("div", { style: "font-size:13.5px; color:var(--ink-soft);" }, "Rezept wird erkannt … das kann einen Moment dauern."),
+    ]));
+    overlay.appendChild(sheet);
+    return overlay;
+  }
+
+  sheet.appendChild(el("p", { style: "font-size:13px; color:var(--ink-soft); margin-bottom:18px;" }, "Screenshot, PDF oder Link eines Rezepts — bei mehreren Fotos (z. B. Zutaten- und Zubereitungsseite) einfach alle auf einmal auswählen, sie werden zu einem Rezept zusammengeführt. Danach kannst du vor dem Speichern noch alles korrigieren."));
+
+  if (state.importError) sheet.appendChild(el("div", { class: "error-text", style: "margin-bottom:14px;" }, state.importError));
+
+  const photoInput = el("input", { type: "file", accept: "image/*", multiple: true, style: "display:none;" });
+  photoInput.addEventListener("change", async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    state.importLoading = true; state.importError = null; render();
+    try {
+      if (files.length === 1) {
+        const base64 = await fileToBase64(files[0]);
+        const result = await callImportFunction({ type: "image", media_type: files[0].type || "image/jpeg", data_base64: base64 });
+        await handleImportResult(result);
+      } else {
+        const images = await Promise.all(files.map(async (f) => ({ media_type: f.type || "image/jpeg", data_base64: await fileToBase64(f) })));
+        const result = await callImportFunction({ type: "images", images });
+        await handleImportResult(result);
+      }
+    } catch (err) { state.importLoading = false; state.importError = err.message; render(); }
+  });
+
+  const pdfInput = el("input", { type: "file", accept: "application/pdf", style: "display:none;" });
+  pdfInput.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    state.importLoading = true; state.importError = null; render();
+    try {
+      const base64 = await fileToBase64(file);
+      const result = await callImportFunction({ type: "pdf", data_base64: base64 });
+      await handleImportResult(result);
+    } catch (err) { state.importLoading = false; state.importError = err.message; render(); }
+  });
+
+  sheet.appendChild(photoInput);
+  sheet.appendChild(pdfInput);
+
+  sheet.appendChild(el("button", {
+    type: "button", class: "btn-secondary", style: "display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:10px;",
+    onclick: () => photoInput.click(),
+  }, [icon("camera"), el("span", {}, "Foto(s) / Screenshot(s) auswählen")]));
+
+  sheet.appendChild(el("button", {
+    type: "button", class: "btn-secondary", style: "display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:18px;",
+    onclick: () => pdfInput.click(),
+  }, [icon("file"), el("span", {}, "PDF auswählen")]));
+
+  sheet.appendChild(el("div", { class: "field-label" }, "…oder Link zu einem Rezept"));
+  const urlRow = el("div", { style: "display:flex; gap:9px;" });
+  const urlInput = el("input", { class: "field-input", style: "margin:0; flex:1;", placeholder: "https://…", type: "url" });
+  urlRow.appendChild(urlInput);
+  const submitUrl = async () => {
+    const url = urlInput.value.trim();
+    if (!url) return;
+    state.importLoading = true; state.importError = null; render();
+    try {
+      const result = await callImportFunction({ type: "url", url });
+      await handleImportResult(result);
+    } catch (err) { state.importLoading = false; state.importError = err.message; render(); }
+  };
+  urlInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); submitUrl(); } });
+  urlRow.appendChild(el("button", { type: "button", class: "btn-primary", style: "width:46px; margin:0; flex-shrink:0; padding:0;", onclick: submitUrl }, icon("plus")));
+  sheet.appendChild(urlRow);
+
+  overlay.appendChild(sheet);
+  return overlay;
+}
+
+// ============ Bestätigungsdialog (einheitlich statt window.confirm) ============
+function askConfirm(message, onConfirm) {
+  state.confirmDialog = { message, onConfirm };
+  render();
+}
+function ConfirmModal() {
+  const { message, onConfirm } = state.confirmDialog;
+  const overlay = el("div", { class: "modal-overlay", style: "z-index:50; align-items:center;", onclick: (e) => { if (e.target === overlay) { state.confirmDialog = null; render(); } } });
+  const sheet = el("div", { class: "modal-sheet", style: "border-radius:24px; max-width:340px;", onclick: (e) => e.stopPropagation() });
+  sheet.appendChild(el("div", { style: "font-size:16.5px; font-weight:700; margin-bottom:8px; letter-spacing:-0.2px;" }, "Bist du sicher?"));
+  sheet.appendChild(el("div", { style: "font-size:14px; color:var(--ink-soft); line-height:1.5; margin-bottom:22px;" }, message));
+  const row = el("div", { style: "display:flex; gap:10px;" });
+  row.appendChild(el("button", { type: "button", class: "btn-secondary", style: "margin:0;", onclick: () => { state.confirmDialog = null; render(); } }, "Abbrechen"));
+  row.appendChild(el("button", {
+    type: "button", style: "flex:1; background:var(--danger); color:#fff; border:none; border-radius:14px; padding:13px 0; font-size:14.5px; font-weight:600;",
+    onclick: () => { state.confirmDialog = null; onConfirm(); },
+  }, "Löschen"));
+  sheet.appendChild(row);
+  overlay.appendChild(sheet);
+  return overlay;
+}
+
+// ============ Supabase REST Helper ============
+async function refreshSession() {
+  if (!state.session || !state.session.refresh_token) throw new Error("Keine Sitzung zum Erneuern vorhanden.");
+  const res = await fetch(SUPABASE_URL + "/auth/v1/token?grant_type=refresh_token", {
+    method: "POST",
+    headers: { apikey: SUPABASE_ANON_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ refresh_token: state.session.refresh_token }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.access_token) throw new Error("Sitzung konnte nicht erneuert werden.");
+  state.session = { access_token: data.access_token, refresh_token: data.refresh_token, user: data.user || state.session.user };
+  return state.session;
+}
+
+async function sb(path, { method = "GET", body, auth = true, _retried = false } = {}) {
+  const headers = { apikey: SUPABASE_ANON_KEY, "Content-Type": "application/json" };
+  if (auth && state.session) headers.Authorization = "Bearer " + state.session.access_token;
+  else headers.Authorization = "Bearer " + SUPABASE_ANON_KEY;
+  if (method !== "GET") headers.Prefer = "return=representation";
+  const res = await fetch(SUPABASE_URL + "/rest/v1/" + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  if (!res.ok) {
+    const t = await res.text();
+    const isExpired = res.status === 401 || t.includes("JWT expired") || t.includes("PGRST303") || t.includes("invalid JWT");
+    if (isExpired && auth && state.session && !_retried) {
+      try {
+        await refreshSession();
+        return await sb(path, { method, body, auth, _retried: true });
+      } catch (refreshErr) {
+        state.session = null;
+        render();
+        throw new Error("Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.");
+      }
+    }
+    throw new Error(t || res.statusText);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+async function authRequest(path, body) {
+  const res = await fetch(SUPABASE_URL + "/auth/v1/" + path, {
+    method: "POST",
+    headers: { apikey: SUPABASE_ANON_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error_description || data.msg || data.error || "Fehler");
+  return data;
+}
+
+// ============ Daten laden ============
+function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+
+async function ensureHousehold() {
+  const userId = state.session.user && state.session.user.id;
+  if (!userId) throw new Error("Keine gültige Nutzer-ID nach dem Login erhalten.");
+  let rows = await sb(`household_members?household_id=eq.${HOUSEHOLD_ID}&user_id=eq.${userId}&select=household_id`);
+  if (rows.length) return;
+
+  // Direkt nach einer Registrierung/Anmeldung kann es einen kurzen Moment dauern, bis der
+  // Login-Kontext bei der Datenbank vollständig "ankommt" -- daher mit kurzen Pausen mehrfach
+  // versuchen, statt sofort einen Fehler zu zeigen.
+  let lastError = null;
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    try {
+      await sb("household_members", { method: "POST", body: { household_id: HOUSEHOLD_ID, user_id: userId } });
+      rows = await sb(`household_members?household_id=eq.${HOUSEHOLD_ID}&user_id=eq.${userId}&select=household_id`);
+      if (rows.length) return;
+    } catch (e) {
+      lastError = e;
+    }
+    await sleep(800 * attempt);
+  }
+  throw new Error("Konnte den Haushalt nicht automatisch verknüpfen. Bitte versuch es in ein paar Sekunden erneut (App neu laden). " + (lastError ? "Technisches Detail: " + lastError.message : ""));
+}
+function mondayOf(date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().slice(0, 10);
+}
+async function ensureWeekPlan() {
+  const weekStart = mondayOf(new Date());
+  let rows = await sb(`week_plans?household_id=eq.${HOUSEHOLD_ID}&week_start_date=eq.${weekStart}&select=id`);
+  let planId;
+  if (rows.length) planId = rows[0].id;
+  else {
+    const created = await sb("week_plans", { method: "POST", body: { household_id: HOUSEHOLD_ID, week_start_date: weekStart } });
+    planId = created[0].id;
+  }
+  state.weekPlanId = planId;
+  const entries = await sb(`week_plan_entries?week_plan_id=eq.${planId}&select=id,day,recipe_id,servings_override`);
+  state.weekEntries = entries;
+
+  let listRows = await sb(`shopping_lists?week_plan_id=eq.${planId}&select=id`);
+  let listId;
+  if (listRows.length) listId = listRows[0].id;
+  else {
+    const created = await sb("shopping_lists", { method: "POST", body: { week_plan_id: planId, household_id: HOUSEHOLD_ID } });
+    listId = created[0].id;
+  }
+  state.shoppingListId = listId;
+  const items = await sb(`shopping_list_items?shopping_list_id=eq.${listId}&ingredient_id=is.null&select=id,custom_name,category,is_checked`);
+  state.manualItems = items;
+}
+async function loadIngredients() {
+  state.ingredients = await sb(`ingredients?household_id=eq.${HOUSEHOLD_ID}&select=*&order=name.asc`);
+}
+async function loadStores() {
+  state.stores = await sb(`stores?household_id=eq.${HOUSEHOLD_ID}&select=*&order=name.asc`);
+  if (state.stores.length && !state.stores.find((s) => s.name === state.store)) state.store = state.stores[0].name;
+}
+async function loadPantry() {
+  const rows = await sb(`pantry_items?household_id=eq.${HOUSEHOLD_ID}&select=ingredient_id`);
+  state.pantryIngredientIds = new Set(rows.map((r) => r.ingredient_id));
+}
+async function loadRecipes() {
+  const recipes = await sb(`recipes?household_id=eq.${HOUSEHOLD_ID}&select=*,recipe_ingredients(id,amount,unit,ingredient_id,ingredients(name,category))&order=created_at.desc`);
+  state.recipes = recipes.map((r) => ({
+    ...r,
+    ingredientRows: r.recipe_ingredients.map((ri) => ({
+      id: ri.id, amount: ri.amount, unit: ri.unit, ingredient_id: ri.ingredient_id,
+      name: ri.ingredients?.name, category: ri.ingredients?.category,
+    })),
+  }));
+}
+async function loadAll() {
+  state.loading = true; render();
+  try {
+    await ensureHousehold();
+    await Promise.all([loadIngredients(), loadRecipes(), loadStores(), loadPantry()]);
+    await ensureWeekPlan();
+  } catch (e) { console.error(e); alert(e.message || "Fehler beim Laden. Bitte lade die Seite neu."); }
+  state.loading = false; render();
+  processSharedUrlIfAny();
+}
+
+// ============ Über "Teilen" empfangene Rezept-Links verarbeiten ============
+function extractSharedUrl() {
+  const params = new URLSearchParams(window.location.search);
+  let url = params.get("shared_url") || "";
+  const text = params.get("shared_text") || "";
+  if (!url && text) {
+    const match = text.match(/https?:\/\/\S+/);
+    if (match) url = match[0];
+  }
+  if (params.has("shared_url") || params.has("shared_text") || params.has("shared_title")) {
+    window.history.replaceState({}, "", window.location.pathname);
+  }
+  return url || null;
+}
+
+async function processSharedUrlIfAny() {
+  if (!state.pendingSharedUrl || !state.session) return;
+  const url = state.pendingSharedUrl;
+  state.pendingSharedUrl = null;
+  state.showImportRecipe = true;
+  state.importLoading = true;
+  state.importError = null;
+  render();
+  try {
+    const result = await callImportFunction({ type: "url", url });
+    await handleImportResult(result);
+  } catch (err) {
+    state.importLoading = false;
+    state.importError = err.message;
+    render();
+  }
+}
+
+// ============ Auth Screen ============
+function AuthScreen() {
+  const wrap = el("div", { style: "padding: 60px 24px;" });
+  wrap.appendChild(el("h1", { class: "page-title", style: "margin-bottom: 8px;" }, "Rezept-App"));
+  wrap.appendChild(el("p", { class: "subtitle", style: "margin-bottom: 32px;" },
+    state.authMode === "login" ? "Melde dich an, um fortzufahren." : "Erstelle einen Account für euren Haushalt."));
+
+  const emailInput = el("input", { class: "field-input", type: "email", placeholder: "E-Mail", id: "auth-email" });
+  const pwInput = el("input", { class: "field-input", type: "password", placeholder: "Passwort", id: "auth-password" });
+  wrap.appendChild(emailInput);
+  wrap.appendChild(pwInput);
+
+  if (state.authError) wrap.appendChild(el("div", { class: "error-text" }, state.authError));
+
+  const submitBtn = el("button", {
+    class: "btn-primary", style: "margin-top: 14px;",
+    onclick: async () => {
+      const email = emailInput.value.trim();
+      const password = pwInput.value;
+      if (!email || !password) { state.authError = "Bitte E-Mail und Passwort ausfüllen."; render(); return; }
+      state.authLoading = true; state.authError = null; render();
+      try {
+        if (state.authMode === "signup") {
+          const data = await authRequest("signup", { email, password });
+          if (data.access_token) {
+            state.session = { access_token: data.access_token, refresh_token: data.refresh_token, user: data.user };
+            await loadAll();
+          } else {
+            state.authError = "Konto erstellt! Bitte bestätige die E-Mail (Link in deinem Postfach) und melde dich danach an.";
+            state.authMode = "login";
+          }
+        } else {
+          const data = await authRequest("token?grant_type=password", { email, password });
+          state.session = { access_token: data.access_token, refresh_token: data.refresh_token, user: data.user };
+          await loadAll();
+        }
+      } catch (e) {
+        state.authError = e.message;
+      }
+      state.authLoading = false; render();
+    },
+  }, state.authLoading ? "…" : (state.authMode === "login" ? "Anmelden" : "Konto erstellen"));
+  wrap.appendChild(submitBtn);
+
+  const toggle = el("button", {
+    class: "btn-secondary", style: "margin-top: 10px;",
+    onclick: () => { state.authMode = state.authMode === "login" ? "signup" : "login"; state.authError = null; render(); },
+  }, state.authMode === "login" ? "Noch kein Konto? Registrieren" : "Schon registriert? Anmelden");
+  wrap.appendChild(toggle);
+
+  return wrap;
+}
+
+// ============ Rezepte Tab ============
+function RecipesTab() {
+  const wrap = el("div", { class: "top-pad" });
+  wrap.appendChild(el("h1", { class: "page-title" }, "Rezepte"));
+  wrap.appendChild(el("div", { style: "height: 16px;" }));
+
+  const search = el("div", { class: "search-box" }, [
+    icon("search"),
+    el("input", {
+      id: "recipe-search-input",
+      placeholder: "Rezept suchen", value: state.query,
+      oninput: (e) => { state.query = e.target.value; renderTabOnly(); },
+    }),
+  ]);
+  wrap.appendChild(search);
+
+  const leftoverBox = el("div", { class: "search-box", style: "background:var(--accent-soft);" }, [
+    icon("leaf"),
+    el("input", {
+      id: "leftover-search-input",
+      placeholder: "Was hast du übrig? (z. B. Zucchini, Feta)", value: state.leftoverQuery,
+      oninput: (e) => { state.leftoverQuery = e.target.value; renderTabOnly(); },
+      style: "color:var(--ink);",
+    }),
+  ]);
+  wrap.appendChild(leftoverBox);
+  wrap.appendChild(el("div", { style: "height: 14px;" }));
+
+  const allTags = [...new Set(state.recipes.flatMap((r) => r.tags || []))];
+  const tagRow = el("div", { style: "display:flex; gap:7px; overflow-x:auto; padding-bottom:4px; margin-bottom:18px;" });
+  allTags.forEach((t) => {
+    const active = state.activeTags.includes(t);
+    tagRow.appendChild(el("button", {
+      class: "pill" + (active ? " active" : ""),
+      onclick: () => {
+        state.activeTags = active ? state.activeTags.filter((x) => x !== t) : [...state.activeTags, t];
+        renderTabOnly();
+      },
+    }, t));
+  });
+  wrap.appendChild(tagRow);
+
+  const buttonRow = el("div", { style: "display:flex; gap:10px; margin-bottom:20px;" });
+  buttonRow.appendChild(el("button", {
+    class: "btn-primary", style: "flex:1; margin:0;",
+    onclick: () => { state.showAddRecipe = true; state.editingRecipeId = null; state.newRecipeDraft = { title: "", servings: 4, prep_time_minutes: 30, tags: "", instructions: "", image_url: null, items: [] }; render(); },
+  }, [icon("plus"), el("span", { style: "margin-left:6px;" }, "Neu")]));
+  buttonRow.appendChild(el("button", {
+    type: "button", style: "flex:1; display:flex; align-items:center; justify-content:center; gap:7px; background:var(--accent-soft); color:var(--accent); border:none; border-radius:14px; padding:14px 0; font-size:15px; font-weight:600;",
+    onclick: () => { state.showImportRecipe = true; render(); },
+  }, [icon("sparkles"), el("span", {}, "Importieren")]));
+  wrap.appendChild(buttonRow);
+
+  const leftoverTerms = state.leftoverQuery.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean);
+
+  let filtered = state.recipes.filter((r) => {
+    const okQuery = r.title.toLowerCase().includes(state.query.toLowerCase());
+    const okTags = state.activeTags.every((t) => (r.tags || []).includes(t));
+    const okLeftover = !leftoverTerms.length || leftoverTerms.some((term) => r.ingredientRows.some((ing) => ing.name.toLowerCase().includes(term)));
+    return okQuery && okTags && okLeftover;
+  });
+
+  if (leftoverTerms.length) {
+    filtered = filtered
+      .map((r) => ({ r, matchCount: leftoverTerms.filter((term) => r.ingredientRows.some((ing) => ing.name.toLowerCase().includes(term))).length }))
+      .sort((a, b) => b.matchCount - a.matchCount)
+      .map((x) => x.r);
+  }
+
+  const grid = el("div", { class: "recipe-grid" });
+  filtered.forEach((r) => {
+    const matchedNames = leftoverTerms.length
+      ? [...new Set(r.ingredientRows.filter((ing) => leftoverTerms.some((term) => ing.name.toLowerCase().includes(term))).map((ing) => ing.name))]
+      : [];
+    grid.appendChild(el("button", { class: "recipe-card", onclick: () => { state.openRecipeId = r.id; render(); } }, [
+      r.image_url ? el("div", { class: "thumb", style: "padding:0;" }, el("img", { src: r.image_url, style: "width:100%; height:100%; object-fit:cover; display:block;" })) : el("div", { class: "thumb" }, emojiForTitle(r.title)),
+      el("div", { class: "body" }, [
+        el("div", { class: "title" }, r.title),
+        matchedNames.length ? el("div", { style: "font-size:10.5px; color:var(--accent); font-weight:600; margin-bottom:6px;" }, "✓ " + matchedNames.join(", ")) : null,
+        r.last_cooked_at ? el("div", { style: "font-size:10.5px; color:var(--ink-muted); margin-bottom:6px;" }, formatLastCooked(r.last_cooked_at)) : null,
+        el("div", { class: "meta" }, [
+          el("span", {}, [icon("clock"), el("span", { style: "margin-left:4px;" }, (r.prep_time_minutes || "?") + " min")]),
+          el("span", {}, [icon("users"), el("span", { style: "margin-left:4px;" }, String(r.servings || "-"))]),
+        ]),
+      ]),
+      r.rating ? el("div", { style: "position:absolute; top:8px; right:8px; background:rgba(255,255,255,0.92); border-radius:999px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; color:" + (r.rating === "up" ? "var(--accent)" : "var(--danger)") + "; box-shadow:0 1px 3px rgba(20,20,30,0.12);" }, icon(r.rating === "up" ? "thumbsUp" : "thumbsDown")) : null,
+    ]));
+  });
+  if (!filtered.length) grid.appendChild(el("div", { style: "grid-column:1/-1; color:var(--ink-soft); font-size:14px; padding:24px 4px;" }, state.recipes.length ? "Kein Rezept gefunden." : "Noch keine Rezepte — leg das erste an!"));
+  wrap.appendChild(grid);
+
+  const stats = computeStats();
+  if (stats.mostCooked || stats.longestAgo || stats.weekCount > 0) {
+    wrap.appendChild(el("div", { class: "section-label", style: "margin-top:28px;" }, "Kurz zusammengefasst"));
+    const statsCard = el("div", { class: "card" });
+    if (stats.mostCooked) statsCard.appendChild(el("div", { class: "list-item" }, [
+      el("span", { style: "font-size:17px;" }, "🏆"),
+      el("div", { style: "flex:1; margin-left:10px;" }, [
+        el("div", { style: "font-size:13.5px; font-weight:600;" }, stats.mostCooked.title),
+        el("div", { style: "font-size:11.5px; color:var(--ink-muted);" }, `Meistgekocht — ${stats.mostCooked.times_cooked}× gekocht`),
+      ]),
+    ]));
+    if (stats.longestAgo) statsCard.appendChild(el("div", { class: "list-item" }, [
+      el("span", { style: "font-size:17px;" }, "⏳"),
+      el("div", { style: "flex:1; margin-left:10px;" }, [
+        el("div", { style: "font-size:13.5px; font-weight:600;" }, stats.longestAgo.title),
+        el("div", { style: "font-size:11.5px; color:var(--ink-muted);" }, "Am längsten nicht gekocht — " + formatLastCooked(stats.longestAgo.last_cooked_at)),
+      ]),
+    ]));
+    statsCard.appendChild(el("div", { class: "list-item" }, [
+      el("span", { style: "font-size:17px;" }, "🔥"),
+      el("div", { style: "flex:1; margin-left:10px;" }, [
+        el("div", { style: "font-size:13.5px; font-weight:600;" }, stats.weekCount + (stats.weekCount === 1 ? " Rezept" : " Rezepte")),
+        el("div", { style: "font-size:11.5px; color:var(--ink-muted);" }, "In den letzten 7 Tagen gekocht"),
+      ]),
+    ]));
+    wrap.appendChild(statsCard);
+  }
+
+  return wrap;
+}
+
+async function uploadRecipePhoto(file) {
+  const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, "_");
+  const path = `${state.session.user.id}/${Date.now()}-${safeName}`;
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/recipe-photos/${path}`, {
+    method: "POST",
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + state.session.access_token, "Content-Type": file.type || "application/octet-stream" },
+    body: file,
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return `${SUPABASE_URL}/storage/v1/object/public/recipe-photos/${path}`;
+}
+
+function AddRecipeModal() {
+  const d = state.newRecipeDraft;
+  const isEditing = !!state.editingRecipeId;
+  const closeModal = () => { state.showAddRecipe = false; state.editingRecipeId = null; render(); };
+  const overlay = el("div", { class: "modal-overlay", onclick: (e) => { if (e.target === overlay) closeModal(); } });
+  const sheet = el("div", { class: "modal-sheet", onclick: (e) => e.stopPropagation() });
+
+  sheet.appendChild(el("div", { style: "display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;" }, [
+    el("div", { style: "font-size:19px; font-weight:700; letter-spacing:-0.3px;" }, isEditing ? "Rezept bearbeiten" : "Neues Rezept"),
+    el("button", { class: "icon-btn", onclick: closeModal }, icon("x")),
+  ]));
+
+  sheet.appendChild(el("div", { class: "field-label" }, "Foto"));
+  const photoRow = el("div", { style: "display:flex; align-items:center; gap:12px; margin-bottom:10px;" });
+  if (d.image_url) {
+    const previewWrap = el("div", { style: "position:relative;" });
+    const img = el("img", { src: d.image_url, style: "width:64px; height:64px; object-fit:cover; border-radius:12px; display:block;" });
+    previewWrap.appendChild(img);
+    previewWrap.appendChild(el("button", {
+      type: "button", class: "icon-btn",
+      style: "position:absolute; top:-8px; right:-8px; background:#fff; border-radius:999px; box-shadow:var(--shadow); width:22px; height:22px; align-items:center; justify-content:center; padding:0;",
+      onclick: () => { d.image_url = null; render(); },
+    }, icon("x")));
+    photoRow.appendChild(previewWrap);
+  } else {
+    photoRow.appendChild(el("div", { style: "width:64px; height:64px; border-radius:12px; background:var(--bg-subtle); display:flex; align-items:center; justify-content:center; font-size:26px; flex-shrink:0;" }, emojiForTitle(d.title || "?")));
+  }
+  const fileInput = el("input", { type: "file", accept: "image/*", style: "display:none;" });
+  fileInput.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    state.uploadingPhoto = true; render();
+    try { d.image_url = await uploadRecipePhoto(file); }
+    catch (err) { alert("Foto-Upload fehlgeschlagen: " + err.message); }
+    state.uploadingPhoto = false; render();
+  });
+  photoRow.appendChild(fileInput);
+  photoRow.appendChild(el("button", {
+    type: "button", class: "btn-secondary", style: "margin:0; flex:1;",
+    onclick: () => fileInput.click(),
+  }, state.uploadingPhoto ? "Wird hochgeladen …" : (d.image_url ? "Foto ändern" : "Foto auswählen")));
+  sheet.appendChild(photoRow);
+
+  sheet.appendChild(el("div", { class: "field-label" }, "Titel"));
+  sheet.appendChild(el("input", { class: "field-input", value: d.title, oninput: (e) => (d.title = e.target.value) }));
+
+  sheet.appendChild(el("div", { class: "field-label" }, "Portionen / Zubereitungszeit (Min.)"));
+  const row = el("div", { style: "display:flex; gap:10px;" });
+  row.appendChild(el("input", { class: "field-input", type: "number", value: d.servings, oninput: (e) => (d.servings = e.target.value) }));
+  row.appendChild(el("input", { class: "field-input", type: "number", value: d.prep_time_minutes, oninput: (e) => (d.prep_time_minutes = e.target.value) }));
+  sheet.appendChild(row);
+
+  sheet.appendChild(el("div", { class: "field-label" }, "Tags (Komma-getrennt, z. B. High Protein, Low Carb)"));
+  sheet.appendChild(el("input", { class: "field-input", value: d.tags, oninput: (e) => (d.tags = e.target.value) }));
+
+  sheet.appendChild(el("div", { class: "field-label" }, "Zubereitung"));
+  sheet.appendChild(el("textarea", {
+    class: "field-input", rows: "5",
+    style: "resize:vertical; font-family:inherit; line-height:1.5;",
+    placeholder: "Zubereitungsschritte …",
+    oninput: (e) => (d.instructions = e.target.value),
+  }, d.instructions || ""));
+
+  const ingredientsHeaderRow = el("div", { style: "display:flex; justify-content:space-between; align-items:center; margin:14px 0 6px;" }, [
+    el("span", { class: "field-label", style: "margin:0;" }, "Zutaten"),
+    el("button", {
+      type: "button", class: "pill subtle",
+      onclick: () => { state.showAddIngredient = true; state.editingIngredientId = null; state.newIngredientDraft = null; render(); },
+    }, "+ Neue Zutat anlegen"),
+  ]);
+  sheet.appendChild(ingredientsHeaderRow);
+  const itemsWrap = el("div", { class: "card", style: "margin-bottom: 10px; overflow:visible;" });
+  d.items.forEach((it, idx) => {
+    if (it.searchText === undefined) {
+      const currentIng = state.ingredients.find((i) => i.id === it.ingredient_id);
+      it.searchText = currentIng ? currentIng.name : "";
+    }
+    const rowWrap = el("div", { class: "list-item", style: "position:relative; align-items:flex-start;" });
+    const inputId = "ingredient-row-input-" + idx;
+    const query = (it.searchText || "").trim().toLowerCase();
+    const matches = query ? state.ingredients.filter((ing) => ing.name.toLowerCase().includes(query)).slice(0, 6) : [];
+    const hasExact = state.ingredients.some((ing) => ing.name.toLowerCase() === query);
+
+    const textInput = el("input", {
+      id: inputId,
+      value: it.searchText,
+      placeholder: "Zutat eingeben …",
+      style: "flex:1.4; border:none; background:transparent; font-size:13.5px; color:var(--ink);",
+      oninput: (e) => { it.searchText = e.target.value; it.ingredient_id = null; it.showDropdown = true; renderTabOnly(); },
+    });
+    textInput.addEventListener("blur", () => {
+      setTimeout(() => {
+        // Ein Neu-Aufbau während des Tippens ersetzt das Feld und loest dabei selbst ein
+        // "blur" aus -- nur wirklich schliessen, wenn der Fokus NICHT beim (neu erzeugten)
+        // Feld mit derselben Kennung liegt, sonst klappt die Liste sofort wieder zu.
+        if (document.activeElement && document.activeElement.id === inputId) return;
+        it.showDropdown = false;
+        render();
+      }, 150);
+    });
+    rowWrap.appendChild(textInput);
+    rowWrap.appendChild(el("input", { type: "number", value: it.amount, style: "width:64px; border:none; background:var(--bg-subtle); border-radius:8px; padding:6px 8px; font-size:13px;", oninput: (e) => (it.amount = e.target.value) }));
+    rowWrap.appendChild(el("button", { type: "button", class: "icon-btn", onclick: () => { d.items.splice(idx, 1); render(); } }, icon("x")));
+
+    if (it.showDropdown && query) {
+      const dropdown = el("div", {
+        style: "position:absolute; top:100%; left:0; right:38px; background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); z-index:30; margin-top:4px; overflow:hidden; max-height:230px; overflow-y:auto;",
+      });
+      matches.forEach((ing, i) => {
+        dropdown.appendChild(el("button", {
+          type: "button",
+          style: "display:block; width:100%; text-align:left; padding:10px 13px; background:none; border:none; font-size:13.5px; color:var(--ink);" + (i > 0 ? "border-top:1px solid var(--line);" : ""),
+          onmousedown: (e) => e.preventDefault(),
+          onclick: () => { it.ingredient_id = ing.id; it.searchText = ing.name; it.showDropdown = false; render(); },
+        }, ing.name + " (" + ing.unit + ")"));
+      });
+      if (!hasExact) {
+        dropdown.appendChild(el("button", {
+          type: "button",
+          style: "display:block; width:100%; text-align:left; padding:10px 13px; background:var(--accent-soft); border:none; font-size:13px; font-weight:600; color:var(--accent);" + (matches.length ? "border-top:1px solid var(--line);" : ""),
+          onmousedown: (e) => e.preventDefault(),
+          onclick: () => {
+            state.ingredientCreateTarget = it;
+            state.showAddIngredient = true;
+            state.editingIngredientId = null;
+            state.newIngredientDraft = { name: it.searchText, category: guessCategory(it.searchText) || CATEGORY_ORDER[0], unit: "g", typical_package_size: "", is_favorite: false };
+            render();
+          },
+        }, `+ „${it.searchText}“ neu anlegen`));
+      }
+      rowWrap.appendChild(dropdown);
+    }
+
+    itemsWrap.appendChild(rowWrap);
+  });
+  if (!d.items.length) itemsWrap.appendChild(el("div", { style: "padding:13px 15px; font-size:13px; color:var(--ink-soft);" }, "Noch keine Zutat hinzugefügt."));
+  sheet.appendChild(itemsWrap);
+
+  sheet.appendChild(el("button", {
+    type: "button", class: "btn-secondary", style: "margin-bottom: 20px;",
+    onclick: () => {
+      d.items.push({ ingredient_id: null, amount: 100, searchText: "", showDropdown: false });
+      render();
+    },
+  }, "+ Zutat hinzufügen"));
+
+  sheet.appendChild(el("button", {
+    type: "button", class: "btn-primary",
+    onclick: async () => {
+      if (!d.title.trim()) { alert("Bitte einen Titel eingeben."); return; }
+      try {
+        const payload = {
+          household_id: HOUSEHOLD_ID, title: d.title.trim(),
+          servings: Number(d.servings) || 4, prep_time_minutes: Number(d.prep_time_minutes) || null,
+          tags: d.tags.split(",").map((t) => t.trim()).filter(Boolean),
+          instructions: d.instructions || null,
+          image_url: d.image_url || null,
+          source_type: d.source_type || "manuell",
+        };
+        let recipeId;
+        if (isEditing) {
+          recipeId = state.editingRecipeId;
+          await sb(`recipes?id=eq.${recipeId}`, { method: "PATCH", body: payload });
+          await sb(`recipe_ingredients?recipe_id=eq.${recipeId}`, { method: "DELETE" });
+        } else {
+          const created = await sb("recipes", { method: "POST", body: payload });
+          recipeId = created[0].id;
+        }
+        for (const it of d.items) {
+          if (!it.ingredient_id || !it.amount) continue;
+          const ing = state.ingredients.find((i) => i.id === it.ingredient_id);
+          await sb("recipe_ingredients", { method: "POST", body: { recipe_id: recipeId, ingredient_id: it.ingredient_id, amount: Number(it.amount), unit: ing.unit } });
+        }
+        state.showAddRecipe = false;
+        state.editingRecipeId = null;
+        await loadRecipes();
+        render();
+      } catch (e) { alert("Fehler beim Speichern: " + e.message); }
+    },
+  }, isEditing ? "Änderungen speichern" : "Rezept speichern"));
+
+  overlay.appendChild(sheet);
+  if (state.showAddIngredient) overlay.appendChild(AddIngredientModal((newIng) => {
+    if (state.ingredientCreateTarget) {
+      state.ingredientCreateTarget.ingredient_id = newIng.id;
+      state.ingredientCreateTarget.searchText = newIng.name;
+      state.ingredientCreateTarget.showDropdown = false;
+      state.ingredientCreateTarget = null;
+    } else {
+      d.items.push({ ingredient_id: newIng.id, amount: 100, searchText: newIng.name });
+    }
+  }));
+  return overlay;
+}
+
+// ============ Neue Zutat anlegen (Stammdaten) ============
+function AddIngredientModal(onCreated) {
+  if (!state.newIngredientDraft) state.newIngredientDraft = { name: "", category: CATEGORY_ORDER[0], unit: "g", typical_package_size: "", is_favorite: false };
+  const d = state.newIngredientDraft;
+  const isEditing = !!state.editingIngredientId;
+  const closeModal = () => { state.showAddIngredient = false; state.editingIngredientId = null; state.newIngredientDraft = null; render(); };
+  const overlay = el("div", { class: "modal-overlay", style: "z-index:40;", onclick: (e) => { if (e.target === overlay) closeModal(); } });
+  const sheet = el("div", { class: "modal-sheet", onclick: (e) => e.stopPropagation() });
+
+  sheet.appendChild(el("div", { style: "display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;" }, [
+    el("div", { style: "font-size:19px; font-weight:700; letter-spacing:-0.3px;" }, isEditing ? "Zutat bearbeiten" : "Neue Zutat"),
+    el("button", { type: "button", class: "icon-btn", onclick: closeModal }, icon("x")),
+  ]));
+
+  sheet.appendChild(el("div", { class: "field-label" }, "Name"));
+  sheet.appendChild(el("input", { class: "field-input", value: d.name, oninput: (e) => (d.name = e.target.value) }));
+
+  sheet.appendChild(el("div", { class: "field-label" }, "Kategorie"));
+  const catRow = el("div", { style: "display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;" });
+  CATEGORY_ORDER.forEach((cat) => {
+    catRow.appendChild(el("button", {
+      type: "button", class: "pill" + (d.category === cat ? " active" : ""),
+      onclick: () => { d.category = cat; render(); },
+    }, cat));
+  });
+  sheet.appendChild(catRow);
+
+  sheet.appendChild(el("div", { class: "field-label" }, "Einheit / typische Packungsgröße"));
+  const row2 = el("div", { style: "display:flex; gap:10px;" });
+  const unitSelect = el("select", {
+    class: "field-input", style: "flex:1;",
+    onchange: (e) => (d.unit = e.target.value),
+  }, ["g", "ml", "Stück", "EL", "TL"].map((u) => el("option", { value: u, selected: d.unit === u ? "selected" : null }, u)));
+  row2.appendChild(unitSelect);
+  row2.appendChild(el("input", { class: "field-input", style: "flex:1;", type: "number", placeholder: "z. B. 500", value: d.typical_package_size, oninput: (e) => (d.typical_package_size = e.target.value) }));
+  sheet.appendChild(row2);
+
+  const favRow = el("label", { style: "display:flex; align-items:center; gap:8px; margin:14px 0 20px; font-size:13.5px; color:var(--ink); cursor:pointer;" });
+  const favCheckbox = el("input", { type: "checkbox" });
+  favCheckbox.checked = d.is_favorite;
+  favCheckbox.addEventListener("change", (e) => (d.is_favorite = e.target.checked));
+  favRow.appendChild(favCheckbox);
+  favRow.appendChild(document.createTextNode("Als Favorit markieren (immer auf der Einkaufsliste)"));
+  sheet.appendChild(favRow);
+
+  sheet.appendChild(el("button", {
+    type: "button", class: "btn-primary",
+    onclick: async () => {
+      if (!d.name.trim()) { alert("Bitte einen Namen eingeben."); return; }
+      try {
+        const payload = {
+          name: d.name.trim(), category: d.category, unit: d.unit,
+          typical_package_size: d.typical_package_size ? Number(d.typical_package_size) : null,
+          is_favorite: d.is_favorite,
+        };
+        let resultIng;
+        if (isEditing) {
+          const updated = await sb(`ingredients?id=eq.${state.editingIngredientId}`, { method: "PATCH", body: payload });
+          resultIng = updated[0];
+          const idx = state.ingredients.findIndex((i) => i.id === resultIng.id);
+          if (idx !== -1) state.ingredients[idx] = resultIng;
+        } else {
+          const created = await sb("ingredients", { method: "POST", body: { household_id: HOUSEHOLD_ID, ...payload } });
+          resultIng = created[0];
+          state.ingredients.push(resultIng);
+        }
+        state.ingredients.sort((a, b) => a.name.localeCompare(b.name));
+        state.newIngredientDraft = null;
+        state.showAddIngredient = false;
+        state.editingIngredientId = null;
+        if (onCreated) onCreated(resultIng);
+        render();
+      } catch (e) { alert("Fehler beim Speichern: " + e.message); }
+    },
+  }, isEditing ? "Änderungen speichern" : "Zutat speichern"));
+
+  overlay.appendChild(sheet);
+  return overlay;
+}
+
+// ============ Rezeptdetail ============
+function RecipeDetail(recipe) {
+  const wrap = el("div", { style: "padding-bottom: 40px;" });
+  const hero = el("div", { style: "height:200px; background:var(--bg-subtle); display:flex; align-items:center; justify-content:center; font-size:68px; position:relative; overflow:hidden;" });
+  hero.appendChild(el("button", {
+    class: "icon-btn", style: "position:absolute; top:18px; left:18px; background:#fff; border-radius:999px; width:36px; height:36px; align-items:center; justify-content:center; box-shadow:var(--shadow); z-index:2;",
+    onclick: () => { state.openRecipeId = null; render(); },
+  }, icon("back")));
+  hero.appendChild(el("button", {
+    type: "button", class: "icon-btn", style: "position:absolute; top:18px; right:18px; background:#fff; border-radius:999px; width:36px; height:36px; align-items:center; justify-content:center; box-shadow:var(--shadow); z-index:2;",
+    onclick: () => {
+      state.editingRecipeId = recipe.id;
+      state.newRecipeDraft = {
+        title: recipe.title, servings: recipe.servings || 4, prep_time_minutes: recipe.prep_time_minutes || "",
+        tags: (recipe.tags || []).join(", "), instructions: recipe.instructions || "", image_url: recipe.image_url || null,
+        source_type: recipe.source_type,
+        items: recipe.ingredientRows.map((ing) => ({ ingredient_id: ing.ingredient_id, amount: ing.amount })),
+      };
+      state.showAddRecipe = true;
+      render();
+    },
+  }, icon("edit")));
+  if (recipe.image_url) hero.appendChild(el("img", { src: recipe.image_url, style: "position:absolute; inset:0; width:100%; height:100%; object-fit:cover;" }));
+  else hero.appendChild(el("span", {}, emojiForTitle(recipe.title)));
+  wrap.appendChild(hero);
+
+  const body = el("div", { style: "padding:24px 20px;" });
+  body.appendChild(el("h1", { style: "font-size:24px; font-weight:700; letter-spacing:-0.4px; margin-bottom:12px;" }, recipe.title));
+
+  const tagsRow = el("div", { style: "display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px;" });
+  (recipe.tags || []).forEach((t) => tagsRow.appendChild(el("span", { class: "pill subtle" }, t)));
+  body.appendChild(tagsRow);
+
+  const meta = el("div", { style: "display:flex; gap:18px; font-size:13.5px; color:var(--ink-soft); margin-bottom:8px;" });
+  meta.appendChild(el("span", {}, [icon("clock"), el("span", { style: "margin-left:5px;" }, (recipe.prep_time_minutes || "?") + " Minuten")]));
+  meta.appendChild(el("span", {}, [icon("users"), el("span", { style: "margin-left:5px;" }, (recipe.servings || "-") + " Portionen")]));
+  body.appendChild(meta);
+
+  const secondRow = el("div", { style: "display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;" });
+  secondRow.appendChild(recipe.last_cooked_at
+    ? el("div", { style: "font-size:12px; color:var(--ink-muted);" }, formatLastCooked(recipe.last_cooked_at))
+    : el("div", {}));
+  const rateRow = el("div", { style: "display:flex; gap:6px;" });
+  const setRating = async (value) => {
+    const newValue = recipe.rating === value ? null : value;
+    try {
+      await sb(`recipes?id=eq.${recipe.id}`, { method: "PATCH", body: { rating: newValue } });
+      recipe.rating = newValue;
+      render();
+    } catch (e) { alert("Fehler: " + e.message); }
+  };
+  rateRow.appendChild(el("button", {
+    type: "button", class: "icon-btn",
+    style: "background:" + (recipe.rating === "up" ? "var(--accent-soft)" : "var(--bg-subtle)") + "; color:" + (recipe.rating === "up" ? "var(--accent)" : "var(--ink-muted)") + "; border-radius:10px; padding:7px 9px;",
+    onclick: () => setRating("up"),
+  }, icon("thumbsUp")));
+  rateRow.appendChild(el("button", {
+    type: "button", class: "icon-btn",
+    style: "background:" + (recipe.rating === "down" ? "#FBEAE9" : "var(--bg-subtle)") + "; color:" + (recipe.rating === "down" ? "var(--danger)" : "var(--ink-muted)") + "; border-radius:10px; padding:7px 9px;",
+    onclick: () => setRating("down"),
+  }, icon("thumbsDown")));
+  secondRow.appendChild(rateRow);
+  body.appendChild(secondRow);
+
+  body.appendChild(el("button", {
+    type: "button",
+    style: "width:100%; display:flex; align-items:center; justify-content:center; gap:8px; background:var(--ink); color:#fff; border:none; border-radius:14px; padding:14px 0; font-size:15px; font-weight:600; margin-bottom:10px;",
+    onclick: () => startCookMode(recipe),
+  }, [icon("play"), el("span", {}, "Kochmodus starten")]));
+
+  const assignedDays = state.weekEntries.filter((e) => e.recipe_id === recipe.id).map((e) => e.day);
+  body.appendChild(el("button", {
+    class: "btn-primary", style: assignedDays.length ? "margin-bottom:10px;" : "margin-bottom:24px;",
+    onclick: () => { state.showDayPicker = recipe.id; render(); },
+  }, [icon("calendar"), el("span", { style: "margin-left:8px;" }, "Zu Wochenplan hinzufügen")]));
+  if (assignedDays.length) body.appendChild(el("div", { style: "font-size:12.5px; color:var(--accent); font-weight:500; margin-bottom:24px;" }, "Bereits geplant: " + assignedDays.join(", ")));
+
+  const servingsHeaderRow = el("div", { style: "display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;" }, [
+    el("div", { class: "section-label", style: "margin:0;" }, "Zutaten"),
+  ]);
+  const baseServings = recipe.servings || 4;
+  if (state.viewServingsRecipeId !== recipe.id) { state.viewServingsRecipeId = recipe.id; state.viewServings = baseServings; }
+  const stepper = el("div", { style: "display:flex; align-items:center; gap:10px;" });
+  stepper.appendChild(el("button", {
+    type: "button", class: "icon-btn", style: "background:var(--bg-subtle); border-radius:8px; width:26px; height:26px; align-items:center; justify-content:center; padding:0;",
+    onclick: () => { if (state.viewServings > 1) { state.viewServings--; render(); } },
+  }, el("span", { style: "font-size:15px; font-weight:700;" }, "−")));
+  stepper.appendChild(el("span", { style: "font-size:13.5px; font-weight:600; min-width:70px; text-align:center;" }, state.viewServings + " Portion" + (state.viewServings === 1 ? "" : "en")));
+  stepper.appendChild(el("button", {
+    type: "button", class: "icon-btn", style: "background:var(--bg-subtle); border-radius:8px; width:26px; height:26px; align-items:center; justify-content:center; padding:0;",
+    onclick: () => { state.viewServings++; render(); },
+  }, el("span", { style: "font-size:15px; font-weight:700;" }, "+")));
+  servingsHeaderRow.appendChild(stepper);
+  body.appendChild(servingsHeaderRow);
+
+  const ingCard = el("div", { class: "card", style: "margin-bottom:24px;" });
+  recipe.ingredientRows.forEach((ing) => {
+    const displayAmount = scaleAmount(ing.amount, baseServings, state.viewServings);
+    ingCard.appendChild(el("div", { class: "list-item" }, [
+      el("span", { style: "flex:1; font-size:14px;" }, ing.name || "?"),
+      el("span", { style: "font-size:13px; color:var(--ink-soft);" }, displayAmount + " " + ing.unit),
+    ]));
+  });
+  if (!recipe.ingredientRows.length) ingCard.appendChild(el("div", { style: "padding:13px 15px; font-size:13px; color:var(--ink-soft);" }, "Keine Zutaten hinterlegt."));
+  body.appendChild(ingCard);
+
+  body.appendChild(el("div", { class: "section-label" }, "Zubereitung"));
+  const steps = (recipe.instructions || "").split(/\n+/).map((s) => s.replace(/^\s*\d+[\.\)]\s*/, "").trim()).filter(Boolean);
+  if (!steps.length) {
+    body.appendChild(el("p", { style: "font-size:14px; color:var(--ink-soft); line-height:1.7;" },
+      "Noch keine Zubereitungsschritte hinterlegt. (Im echten Import würde hier der per KI erkannte Text aus Screenshot, PDF oder Link erscheinen.)"));
+  } else {
+    const stepsWrap = el("div", { style: "display:flex; flex-direction:column; gap:14px;" });
+    steps.forEach((step, i) => {
+      stepsWrap.appendChild(el("div", { style: "display:flex; gap:13px; align-items:flex-start;" }, [
+        el("div", {
+          style: "flex-shrink:0; width:28px; height:28px; border-radius:999px; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; font-family:'Inter',sans-serif;",
+        }, String(i + 1)),
+        el("div", { style: "flex:1; font-size:14px; color:var(--ink); line-height:1.6; padding-top:3px;" }, step),
+      ]));
+    });
+    body.appendChild(stepsWrap);
+  }
+
+  body.appendChild(el("button", {
+    style: "width:100%; display:flex; align-items:center; justify-content:center; gap:8px; background:none; border:none; color:var(--danger); font-size:13.5px; font-weight:600; padding:16px 0 4px; margin-top:8px;",
+    onclick: async () => {
+      askConfirm(`„${recipe.title}“ wirklich löschen? Das entfernt es auch aus dem Wochenplan.`, async () => {
+        try {
+          await sb(`recipes?id=eq.${recipe.id}`, { method: "DELETE" });
+          state.recipes = state.recipes.filter((r) => r.id !== recipe.id);
+          state.weekEntries = state.weekEntries.filter((e) => e.recipe_id !== recipe.id);
+          state.openRecipeId = null;
+          render();
+        } catch (e) { alert("Fehler beim Löschen: " + e.message); }
+      });
+    },
+  }, [icon("trash"), el("span", {}, "Rezept löschen")]));
+
+  wrap.appendChild(body);
+  return wrap;
+}
+
+async function toggleDayForRecipe(recipeId, day) {
+  const existing = state.weekEntries.find((e) => e.day === day);
+  try {
+    if (existing && existing.recipe_id === recipeId) {
+      await sb(`week_plan_entries?id=eq.${existing.id}`, { method: "DELETE" });
+      state.weekEntries = state.weekEntries.filter((e) => e.id !== existing.id);
+    } else if (existing) {
+      await sb(`week_plan_entries?id=eq.${existing.id}`, { method: "PATCH", body: { recipe_id: recipeId } });
+      existing.recipe_id = recipeId;
+    } else {
+      const created = await sb("week_plan_entries", { method: "POST", body: { week_plan_id: state.weekPlanId, day, recipe_id: recipeId } });
+      state.weekEntries.push(created[0]);
+    }
+  } catch (e) { alert("Fehler: " + e.message); }
+  render();
+}
+
+// ============ Kochmodus ============
+let wakeLockSentinel = null;
+let cookTimerInterval = null;
+
+async function startCookMode(recipe) {
+  state.cookMode = { recipeId: recipe.id, stepIndex: 0 };
+  render();
+  try {
+    if ("wakeLock" in navigator) wakeLockSentinel = await navigator.wakeLock.request("screen");
+  } catch (e) { console.warn("Wake Lock nicht verfügbar:", e); }
+}
+function exitCookMode() {
+  state.cookMode = null;
+  stopCookTimer();
+  if (wakeLockSentinel) { wakeLockSentinel.release().catch(() => {}); wakeLockSentinel = null; }
+  render();
+}
+function cookStep(delta, stepsLength) {
+  const next = state.cookMode.stepIndex + delta;
+  if (next < 0 || next >= stepsLength) return;
+  state.cookMode.stepIndex = next;
+  stopCookTimer();
+  render();
+}
+function startCookTimer(minutes, label) {
+  stopCookTimer();
+  state.cookTimerSecondsLeft = minutes * 60;
+  state.cookTimerTotalSeconds = minutes * 60;
+  state.cookTimerRunning = true;
+  state.cookTimerLabel = label;
+  render();
+  cookTimerInterval = setInterval(() => {
+    state.cookTimerSecondsLeft--;
+    if (state.cookTimerSecondsLeft <= 0) {
+      stopCookTimer();
+      if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
+      alert("⏰ Timer abgelaufen: " + label);
+      return;
+    }
+    render();
+  }, 1000);
+}
+function stopCookTimer() {
+  if (cookTimerInterval) clearInterval(cookTimerInterval);
+  cookTimerInterval = null;
+  state.cookTimerRunning = false;
+  state.cookTimerSecondsLeft = null;
+  render();
+}
+function formatTimerDisplay(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function CookModeView() {
+  const recipe = state.recipes.find((r) => r.id === state.cookMode.recipeId);
+  if (!recipe) { state.cookMode = null; return el("div"); }
+  const steps = (recipe.instructions || "").split(/\n+/).map((s) => s.replace(/^\s*\d+[\.\)]\s*/, "").trim()).filter(Boolean);
+  if (!steps.length) steps.push("Keine Zubereitungsschritte hinterlegt.");
+  const idx = Math.min(state.cookMode.stepIndex, steps.length - 1);
+  const stepText = steps[idx];
+  const minutes = parseMinutesFromText(stepText);
+
+  // Zaehlen, in wie vielen Schritten jede Zutat insgesamt vorkommt -- wird eine Zutat auf
+  // mehrere Schritte aufgeteilt (z.B. Zucker im Teig UND im Belag), zeigen wir keine
+  // (potenziell falsche) Gesamtmenge mehr an, sondern nur den Namen als Erinnerung.
+  const mentionCounts = {};
+  recipe.ingredientRows.forEach((ing) => {
+    if (!ing.name) return;
+    mentionCounts[ing.ingredient_id] = steps.filter((s) => textMentionsIngredient(s.toLowerCase(), ing.name.toLowerCase())).length;
+  });
+
+  const wrap = el("div", { style: "position:fixed; inset:0; background:var(--bg); color:var(--ink); display:flex; flex-direction:column; z-index:60; touch-action:pan-y;" });
+
+  let swipeStartX = null, swipeStartY = null;
+  wrap.addEventListener("touchstart", (e) => {
+    const t = e.touches[0];
+    swipeStartX = t.clientX; swipeStartY = t.clientY;
+  }, { passive: true });
+  wrap.addEventListener("touchend", (e) => {
+    if (swipeStartX === null) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - swipeStartX;
+    const dy = t.clientY - swipeStartY;
+    swipeStartX = null;
+    if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+      if (dx < 0) cookStep(1, steps.length);
+      else cookStep(-1, steps.length);
+    }
+  }, { passive: true });
+
+  const header = el("div", { style: "display:flex; align-items:center; justify-content:space-between; padding:16px 20px 4px;" });
+  header.appendChild(el("button", { type: "button", class: "icon-btn", style: "background:var(--bg-subtle); border-radius:999px; width:34px; height:34px; align-items:center; justify-content:center;", onclick: exitCookMode }, icon("x")));
+  header.appendChild(el("div", { style: "font-size:12.5px; color:var(--ink-muted); font-weight:600;" }, recipe.title));
+  header.appendChild(el("div", { style: "width:34px;" }));
+  wrap.appendChild(header);
+
+  const dotsRow = el("div", { style: "display:flex; gap:6px; justify-content:center; padding:14px 20px 6px;" });
+  steps.forEach((_, i) => dotsRow.appendChild(el("div", {
+    style: `width:${i === idx ? "18px" : "6px"}; height:6px; border-radius:3px; background:${i <= idx ? "var(--accent)" : "var(--line)"}; transition:width 0.2s ease;`,
+  })));
+  wrap.appendChild(dotsRow);
+  wrap.appendChild(el("div", { style: "text-align:center; font-size:12px; color:var(--ink-muted); font-weight:600; margin-bottom:6px;" }, `Schritt ${idx + 1} von ${steps.length}`));
+
+  const scrollArea = el("div", { style: "flex:1; overflow-y:auto; padding:8px 20px 20px; display:flex; flex-direction:column; gap:14px;" });
+
+  const stepLower = stepText.toLowerCase();
+  const matchedIngredients = recipe.ingredientRows.filter((ing) => ing.name && textMentionsIngredient(stepLower, ing.name.toLowerCase()));
+  if (matchedIngredients.length) {
+    const ingRow = el("div", { style: "display:flex; gap:7px; flex-wrap:wrap;" });
+    matchedIngredients.forEach((ing) => {
+      const inline = extractInlineAmount(stepText, ing.name);
+      let label = ing.name;
+      if (inline) label += " · " + inline.amount + (inline.unit ? " " + inline.unit : "");
+      else if (mentionCounts[ing.ingredient_id] <= 1) label += " · " + ing.amount + " " + ing.unit;
+      ingRow.appendChild(el("div", {
+        style: "background:var(--accent-soft); color:var(--accent); border-radius:999px; padding:7px 13px; font-size:12.5px; font-weight:600;",
+      }, label));
+    });
+    scrollArea.appendChild(ingRow);
+  }
+
+  const stepCard = el("div", { style: "background:var(--bg-subtle); border-radius:20px; padding:22px; flex-shrink:0;" });
+  stepCard.appendChild(el("div", { style: "font-size:19px; line-height:1.55; font-weight:600; color:var(--ink);" }, stepText));
+  if (steps.length > 1) stepCard.appendChild(el("div", { style: "font-size:11px; color:var(--ink-muted); margin-top:14px; display:flex; align-items:center; gap:5px;" }, [icon("chevronRight"), el("span", {}, "Zum Wechseln wischen")]));
+  scrollArea.appendChild(stepCard);
+
+  if (state.cookTimerRunning) {
+    const pct = Math.max(0, Math.min(100, (state.cookTimerSecondsLeft / state.cookTimerTotalSeconds) * 100));
+    const ringWrap = el("div", { style: "display:flex; flex-direction:column; align-items:center; gap:10px; padding:8px 0;" });
+    const ring = el("div", {
+      style: `width:132px; height:132px; border-radius:50%; background:conic-gradient(var(--accent) ${pct}%, var(--line) ${pct}% 100%); display:flex; align-items:center; justify-content:center;`,
+    });
+    const ringInner = el("div", { style: "width:112px; height:112px; border-radius:50%; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center;" }, [
+      el("div", { style: "font-size:26px; font-weight:700; font-variant-numeric:tabular-nums;" }, formatTimerDisplay(state.cookTimerSecondsLeft)),
+      el("div", { style: "font-size:10px; color:var(--ink-muted); margin-top:2px;" }, "verbleibend"),
+    ]);
+    ring.appendChild(ringInner);
+    ringWrap.appendChild(ring);
+    ringWrap.appendChild(el("button", { type: "button", style: "background:none; border:none; color:var(--ink-muted); font-size:13px; font-weight:600; text-decoration:underline;", onclick: stopCookTimer }, "Timer stoppen"));
+    scrollArea.appendChild(ringWrap);
+  } else if (minutes) {
+    scrollArea.appendChild(el("button", {
+      type: "button",
+      style: "display:flex; align-items:center; justify-content:center; gap:8px; background:var(--accent-soft); color:var(--accent); border:none; border-radius:14px; padding:13px 0; font-size:14px; font-weight:600;",
+      onclick: () => startCookTimer(minutes, stepText),
+    }, [icon("timer"), el("span", {}, `Timer starten (${minutes} Min.)`)]));
+  }
+
+  if (idx < steps.length - 1) {
+    scrollArea.appendChild(el("div", { style: "font-size:12px; color:var(--ink-muted); padding-top:4px;" }, [
+      el("span", { style: "font-weight:700;" }, "Als Nächstes: "),
+      el("span", { style: "overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; max-width:100%; vertical-align:bottom;" }, steps[idx + 1]),
+    ]));
+  }
+
+  wrap.appendChild(scrollArea);
+
+  const navRow = el("div", { style: "display:flex; gap:10px; padding:12px 20px max(16px, env(safe-area-inset-bottom)) 20px; border-top:1px solid var(--line);" });
+  navRow.appendChild(el("button", {
+    type: "button", class: "btn-secondary", style: `flex:1; margin:0; opacity:${idx === 0 ? "0.4" : "1"};`,
+    onclick: () => cookStep(-1, steps.length),
+  }, "Zurück"));
+  if (idx === steps.length - 1) {
+    navRow.appendChild(el("button", {
+      type: "button", class: "btn-primary", style: "flex:2; margin:0;",
+      onclick: exitCookMode,
+    }, "Fertig! 🎉"));
+  } else {
+    navRow.appendChild(el("button", {
+      type: "button", class: "btn-primary", style: "flex:2; margin:0; display:flex; align-items:center; justify-content:center; gap:6px;",
+      onclick: () => cookStep(1, steps.length),
+    }, [el("span", {}, "Weiter"), icon("chevronRight")]));
+  }
+  wrap.appendChild(navRow);
+
+  return wrap;
+}
+
+function DayPickerModal(recipeId) {
+  const recipe = state.recipes.find((r) => r.id === recipeId);
+  const overlay = el("div", { class: "modal-overlay", onclick: (e) => { if (e.target === overlay) { state.showDayPicker = false; render(); } } });
+  const sheet = el("div", { class: "modal-sheet", onclick: (e) => e.stopPropagation() });
+  sheet.appendChild(el("div", { style: "display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;" }, [
+    el("div", { style: "font-size:19px; font-weight:700; letter-spacing:-0.3px;" }, "Tage wählen"),
+    el("button", { class: "icon-btn", onclick: () => { state.showDayPicker = false; render(); } }, icon("x")),
+  ]));
+  sheet.appendChild(el("p", { style: "font-size:13px; color:var(--ink-soft); margin-bottom:18px;" }, "Mehrfachauswahl möglich — praktisch für Reste am Folgetag."));
+  const grid = el("div", { style: "display:grid; grid-template-columns:repeat(4,1fr); gap:9px;" });
+  DAYS.forEach((day) => {
+    const entry = state.weekEntries.find((e) => e.day === day);
+    const assignedHere = entry && entry.recipe_id === recipeId;
+    const takenByOther = entry && entry.recipe_id !== recipeId;
+    const btn = el("button", { class: "day-chip" + (assignedHere ? " assigned" : ""), onclick: () => toggleDayForRecipe(recipeId, day) }, day);
+    if (takenByOther) btn.appendChild(el("div", { style: "position:absolute; bottom:5px; left:50%; transform:translateX(-50%); width:4px; height:4px; border-radius:50%; background:var(--ink-muted);" }));
+    grid.appendChild(btn);
+  });
+  sheet.appendChild(grid);
+  sheet.appendChild(el("button", { class: "btn-secondary", style: "margin-top:18px;", onclick: () => { state.showDayPicker = false; render(); } }, "Fertig"));
+  overlay.appendChild(sheet);
+  return overlay;
+}
+
+// ============ Wochenplan Tab ============
+function WeekPlanTab() {
+  const wrap = el("div", { class: "top-pad" });
+  wrap.appendChild(el("h1", { class: "page-title" }, "Wochenplan"));
+  const plannedCount = state.weekEntries.length;
+  wrap.appendChild(el("p", { class: "subtitle" }, plannedCount + " von 7 Tagen geplant"));
+
+  if (plannedCount < 7) {
+    wrap.appendChild(el("button", {
+      type: "button",
+      style: "width:100%; display:flex; align-items:center; justify-content:center; gap:8px; background:var(--accent-soft); color:var(--accent); border:none; border-radius:14px; padding:13px 0; font-size:14px; font-weight:600; margin-bottom:16px;",
+      onclick: planWeekAutomatically,
+      disabled: state.planningWeek,
+    }, state.planningWeek ? "Plane …" : [icon("magic"), el("span", { style: "margin-left:6px;" }, "Woche für mich planen")]));
+  }
+
+  DAYS.forEach((day) => {
+    const entry = state.weekEntries.find((e) => e.day === day);
+    const recipe = entry ? state.recipes.find((r) => r.id === entry.recipe_id) : null;
+    const row = el("div", { class: "day-row" });
+    row.appendChild(el("div", { class: "day-label" }, day));
+    if (recipe) {
+      row.appendChild(el("div", { style: "font-size:22px;" }, emojiForTitle(recipe.title)));
+      const info = el("div", { style: "flex:1; min-width:0;" });
+      info.appendChild(el("div", { style: "font-size:14px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" }, recipe.title));
+      const effectiveServings = entry.servings_override || recipe.servings || 4;
+      const servingsRow = el("div", { style: "display:flex; align-items:center; gap:3px; margin-top:2px;" });
+      servingsRow.appendChild(el("button", {
+        type: "button", style: "background:none; border:none; color:var(--ink-muted); font-size:13px; font-weight:700; padding:0 3px; line-height:1;",
+        onclick: () => { if (effectiveServings > 1) updateServingsOverride(entry, effectiveServings - 1); },
+      }, "−"));
+      servingsRow.appendChild(el("span", { style: "font-size:11px; color:var(--ink-muted);" }, effectiveServings + " Port." + (entry.servings_override ? " ✎" : "")));
+      servingsRow.appendChild(el("button", {
+        type: "button", style: "background:none; border:none; color:var(--ink-muted); font-size:13px; font-weight:700; padding:0 3px; line-height:1;",
+        onclick: () => updateServingsOverride(entry, effectiveServings + 1),
+      }, "+"));
+      if (recipe.last_cooked_at) servingsRow.appendChild(el("span", { style: "font-size:11px; color:var(--ink-muted); margin-left:4px;" }, "· " + formatLastCooked(recipe.last_cooked_at)));
+      info.appendChild(servingsRow);
+      row.appendChild(info);
+      row.appendChild(el("button", {
+        type: "button", class: "icon-btn", title: "Als gekocht markieren",
+        style: "color:" + (isCookedToday(recipe) ? "var(--accent)" : "var(--ink-muted)") + ";",
+        onclick: async () => {
+          try {
+            const nowIso = new Date().toISOString();
+            const newCount = (recipe.times_cooked || 0) + 1;
+            await sb(`recipes?id=eq.${recipe.id}`, { method: "PATCH", body: { last_cooked_at: nowIso, times_cooked: newCount } });
+            recipe.last_cooked_at = nowIso;
+            recipe.times_cooked = newCount;
+            render();
+          } catch (e) { alert("Fehler: " + e.message); }
+        },
+      }, icon("check")));
+      row.appendChild(el("button", { class: "icon-btn", onclick: async () => {
+        try { await sb(`week_plan_entries?id=eq.${entry.id}`, { method: "DELETE" }); state.weekEntries = state.weekEntries.filter((e) => e.id !== entry.id); render(); }
+        catch (e) { alert("Fehler: " + e.message); }
+      } }, icon("x")));
+    } else {
+      row.appendChild(el("button", {
+        style: "flex:1; display:flex; align-items:center; gap:7px; background:none; border:none; color:var(--ink-muted); font-size:14px; padding:6px 0;",
+        onclick: () => { state.showWeekPicker = day; render(); },
+      }, [icon("plus"), el("span", {}, "Rezept wählen")]));
+    }
+    wrap.appendChild(row);
+  });
+
+  if (state.weekEntries.length) {
+    wrap.appendChild(el("button", {
+      type: "button",
+      style: "width:100%; display:flex; align-items:center; justify-content:center; gap:8px; background:none; border:none; color:var(--danger); font-size:13.5px; font-weight:600; padding:20px 0 4px;",
+      onclick: () => {
+        askConfirm("Den kompletten Wochenplan leeren? Alle Tage werden zurückgesetzt.", async () => {
+          try {
+            await sb(`week_plan_entries?week_plan_id=eq.${state.weekPlanId}`, { method: "DELETE" });
+            state.weekEntries = [];
+            render();
+          } catch (e) { alert("Fehler beim Löschen: " + e.message); }
+        });
+      },
+    }, [icon("trash"), el("span", {}, "Wochenplan komplett löschen")]));
+  }
+
+  return wrap;
+}
+
+function computeStats() {
+  let mostCooked = null;
+  state.recipes.forEach((r) => { if ((r.times_cooked || 0) > 0 && (!mostCooked || r.times_cooked > mostCooked.times_cooked)) mostCooked = r; });
+  let longestAgo = null;
+  state.recipes.forEach((r) => { if (r.last_cooked_at && (!longestAgo || new Date(r.last_cooked_at) < new Date(longestAgo.last_cooked_at))) longestAgo = r; });
+  const weekCount = state.recipes.filter((r) => r.last_cooked_at && (Date.now() - new Date(r.last_cooked_at).getTime()) < 7 * 86400000).length;
+  return { mostCooked, longestAgo, weekCount };
+}
+
+function isCookedToday(recipe) {
+  if (!recipe.last_cooked_at) return false;
+  const days = Math.floor((Date.now() - new Date(recipe.last_cooked_at).getTime()) / 86400000);
+  return days <= 0;
+}
+
+async function updateServingsOverride(entry, newServings) {
+  try {
+    await sb(`week_plan_entries?id=eq.${entry.id}`, { method: "PATCH", body: { servings_override: newServings } });
+    entry.servings_override = newServings;
+    render();
+  } catch (e) { alert("Fehler: " + e.message); }
+}
+
+async function planWeekAutomatically() {
+  const emptyDays = DAYS.filter((d) => !state.weekEntries.find((e) => e.day === d));
+  if (!emptyDays.length) return;
+  if (!state.recipes.length) { alert("Noch keine Rezepte vorhanden."); return; }
+
+  state.planningWeek = true; render();
+  try {
+    // Kandidaten nach "am laengsten nicht gekocht" sortieren (nie gekocht = ganz vorne)
+    const pool = [...state.recipes].sort((a, b) => {
+      const ta = a.last_cooked_at ? new Date(a.last_cooked_at).getTime() : 0;
+      const tb = b.last_cooked_at ? new Date(b.last_cooked_at).getTime() : 0;
+      return ta - tb;
+    });
+    const usedThisRun = new Set();
+    const usageMap = {};
+    state.weekEntries.forEach((e) => {
+      const r = state.recipes.find((x) => x.id === e.recipe_id);
+      if (r) r.ingredientRows.forEach((ing) => { usageMap[ing.ingredient_id] = (usageMap[ing.ingredient_id] || 0) + Number(ing.amount); });
+    });
+
+    for (const day of emptyDays) {
+      let candidates = pool.filter((r) => !usedThisRun.has(r.id));
+      if (!candidates.length) candidates = pool;
+      // Unter den 3 am laengsten nicht gekochten dasjenige waehlen, das am meisten Zutaten
+      // mit der bereits geplanten Woche teilt (weniger Einkaufsvielfalt)
+      const topCandidates = candidates.slice(0, Math.min(3, candidates.length));
+      let best = topCandidates[0];
+      let bestScore = -1;
+      for (const cand of topCandidates) {
+        let score = 0;
+        cand.ingredientRows.forEach((ing) => { if (usageMap[ing.ingredient_id]) score++; });
+        if (score > bestScore) { bestScore = score; best = cand; }
+      }
+      const created = await sb("week_plan_entries", { method: "POST", body: { week_plan_id: state.weekPlanId, day, recipe_id: best.id } });
+      state.weekEntries.push(created[0]);
+      usedThisRun.add(best.id);
+      best.ingredientRows.forEach((ing) => { usageMap[ing.ingredient_id] = (usageMap[ing.ingredient_id] || 0) + Number(ing.amount); });
+    }
+  } catch (e) { alert("Fehler beim automatischen Planen: " + e.message); }
+  state.planningWeek = false; render();
+}
+
+function overlapHint(recipe) {
+  const usage = {};
+  state.weekEntries.forEach((e) => {
+    const r = state.recipes.find((x) => x.id === e.recipe_id);
+    if (!r) return;
+    r.ingredientRows.forEach((ing) => { usage[ing.ingredient_id] = (usage[ing.ingredient_id] || 0) + Number(ing.amount); });
+  });
+  for (const ing of recipe.ingredientRows) {
+    const already = usage[ing.ingredient_id] || 0;
+    const stammdaten = state.ingredients.find((i) => i.id === ing.ingredient_id);
+    if (!already && stammdaten && stammdaten.typical_package_size && Number(ing.amount) < stammdaten.typical_package_size * 0.85) {
+      const candidate = state.recipes.find((r2) => r2.id !== recipe.id && r2.ingredientRows.some((i2) => i2.ingredient_id === ing.ingredient_id));
+      if (candidate) return ing.name + " reicht für mehr — z. B. auch „" + candidate.title + "“";
+    }
+  }
+  return null;
+}
+
+function WeekPickerModal(day) {
+  const overlay = el("div", { class: "modal-overlay", onclick: (e) => { if (e.target === overlay) { state.showWeekPicker = null; render(); } } });
+  const sheet = el("div", { class: "modal-sheet", onclick: (e) => e.stopPropagation() });
+  sheet.appendChild(el("div", { style: "display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;" }, [
+    el("div", { style: "font-size:19px; font-weight:700; letter-spacing:-0.3px;" }, "Rezept für " + day),
+    el("button", { class: "icon-btn", onclick: () => { state.showWeekPicker = null; render(); } }, icon("x")),
+  ]));
+  const list = el("div", { style: "display:flex; flex-direction:column; gap:9px;" });
+  state.recipes.forEach((r) => {
+    const hint = overlapHint(r);
+    const btn = el("button", {
+      style: "text-align:left; background:var(--bg-subtle); border:none; border-radius:14px; padding:12px 14px;",
+      onclick: async () => {
+        try {
+          const existing = state.weekEntries.find((e) => e.day === day);
+          if (existing) { await sb(`week_plan_entries?id=eq.${existing.id}`, { method: "PATCH", body: { recipe_id: r.id } }); existing.recipe_id = r.id; }
+          else { const created = await sb("week_plan_entries", { method: "POST", body: { week_plan_id: state.weekPlanId, day, recipe_id: r.id } }); state.weekEntries.push(created[0]); }
+          state.showWeekPicker = null; render();
+        } catch (e) { alert("Fehler: " + e.message); }
+      },
+    });
+    btn.appendChild(el("div", { style: "display:flex; align-items:center; gap:11px;" }, [
+      el("span", { style: "font-size:23px;" }, emojiForTitle(r.title)),
+      el("span", { style: "font-size:14px; font-weight:600;" }, r.title),
+    ]));
+    if (hint) btn.appendChild(el("div", { style: "margin-top:8px; font-size:12px; color:var(--accent); background:var(--accent-soft); border-radius:10px; padding:6px 9px; line-height:1.4;" }, hint));
+    list.appendChild(btn);
+  });
+  sheet.appendChild(list);
+  overlay.appendChild(sheet);
+  return overlay;
+}
+
+// ============ Einkaufsliste Tab ============
+function computeGeneratedItems() {
+  const map = {};
+  const skippedFromPantry = [];
+  state.weekEntries.forEach((e) => {
+    const r = state.recipes.find((x) => x.id === e.recipe_id);
+    if (!r) return;
+    const baseServings = r.servings || 4;
+    const targetServings = e.servings_override || baseServings;
+    const factor = targetServings / baseServings;
+    r.ingredientRows.forEach((ing) => {
+      if (state.pantryIngredientIds.has(ing.ingredient_id)) {
+        if (!skippedFromPantry.includes(ing.name)) skippedFromPantry.push(ing.name);
+        return;
+      }
+      if (!map[ing.ingredient_id]) map[ing.ingredient_id] = { amount: 0, name: ing.name, unit: ing.unit, category: ing.category };
+      map[ing.ingredient_id].amount += Number(ing.amount) * factor;
+    });
+  });
+  Object.values(map).forEach((item) => { item.amount = Math.round(item.amount * 10) / 10; });
+  state.ingredients.forEach((ing) => {
+    if (ing.is_favorite && !map[ing.id]) map[ing.id] = { amount: null, name: ing.name, unit: ing.unit, category: ing.category, favorite: true };
+  });
+  return { map, skippedFromPantry };
+}
+
+async function addManualItem(name) {
+  const category = guessCategory(name);
+  try {
+    if (!state.shoppingListId) await ensureWeekPlan();
+    const created = await sb("shopping_list_items", { method: "POST", body: { shopping_list_id: state.shoppingListId, custom_name: name, category, is_checked: false } });
+    state.manualItems.push(created[0]);
+    render();
+  } catch (e) { console.error(e); alert("Fehler beim Hinzufügen: " + e.message); }
+}
+
+function startVoiceInput() {
+  const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognitionCtor) {
+    alert("Spracheingabe wird auf diesem Gerät/Browser leider nicht unterstützt. Auf dem iPhone hilft es manchmal, die Seite direkt in Safari statt der installierten App zu öffnen.");
+    return;
+  }
+  const recognition = new SpeechRecognitionCtor();
+  recognition.lang = "de-DE";
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  recognition.onstart = () => { state.voiceListening = true; render(); };
+  recognition.onend = () => { state.voiceListening = false; render(); };
+  recognition.onerror = (e) => {
+    state.voiceListening = false; render();
+    if (e.error === "not-allowed" || e.error === "service-not-allowed") alert("Zugriff aufs Mikrofon wurde nicht erlaubt. Bitte in den Geräte-Einstellungen für den Browser freigeben.");
+    else if (e.error !== "no-speech" && e.error !== "aborted") alert("Spracheingabe-Fehler: " + e.error);
+  };
+  recognition.onresult = (e) => {
+    const transcript = e.results[0][0].transcript;
+    // Bei "Zwiebeln und Tomaten und Käse" o.ä. in einzelne Eintraege auftrennen
+    const parts = transcript.split(/,| und /i).map((s) => s.trim()).filter(Boolean);
+    parts.forEach((part) => addManualItem(part.charAt(0).toUpperCase() + part.slice(1)));
+  };
+
+  try { recognition.start(); } catch (e) { state.voiceListening = false; }
+}
+async function setManualCategory(id, category) {
+  try { await sb(`shopping_list_items?id=eq.${id}`, { method: "PATCH", body: { category } }); const it = state.manualItems.find((m) => m.id === id); it.category = category; render(); }
+  catch (e) { alert("Fehler: " + e.message); }
+}
+async function removeManualItem(id) {
+  try { await sb(`shopping_list_items?id=eq.${id}`, { method: "DELETE" }); state.manualItems = state.manualItems.filter((m) => m.id !== id); render(); }
+  catch (e) { alert("Fehler: " + e.message); }
+}
+async function toggleManualChecked(id) {
+  const it = state.manualItems.find((m) => m.id === id);
+  it.is_checked = !it.is_checked;
+  render();
+  try { await sb(`shopping_list_items?id=eq.${id}`, { method: "PATCH", body: { is_checked: it.is_checked } }); }
+  catch (e) { alert("Fehler: " + e.message); }
+}
+
+function ShoppingListTab() {
+  const wrap = el("div", { class: "top-pad" });
+  wrap.appendChild(el("h1", { class: "page-title" }, "Einkaufsliste"));
+
+  const { map: generated, skippedFromPantry } = computeGeneratedItems();
+  const genCount = Object.keys(generated).length;
+  const totalCount = genCount + state.manualItems.length;
+  const checkedCount = Object.values(state.checkedRecipeItems).filter(Boolean).length + state.manualItems.filter((m) => m.is_checked).length;
+  wrap.appendChild(el("p", { class: "subtitle" }, checkedCount + " von " + totalCount + " erledigt"));
+
+  if (skippedFromPantry.length) {
+    wrap.appendChild(el("div", {
+      style: "display:flex; align-items:center; gap:8px; background:var(--bg-subtle); border-radius:12px; padding:10px 13px; margin-bottom:16px; font-size:12px; color:var(--ink-soft);",
+    }, [icon("pantry"), el("span", {}, skippedFromPantry.length + " aus dem Vorrat nicht hinzugefügt: " + skippedFromPantry.join(", "))]));
+  }
+
+  const storeRow = el("div", { style: "display:flex; gap:7px; margin-bottom:20px; flex-wrap:wrap;" });
+  state.stores.forEach((s) => {
+    storeRow.appendChild(el("button", { type: "button", class: "pill" + (state.store === s.name ? " active" : ""), onclick: () => { state.store = s.name; renderTabOnly(); } }, s.name));
+  });
+  if (!state.stores.length) storeRow.appendChild(el("div", { style: "font-size:12.5px; color:var(--ink-soft);" }, "Noch kein Laden angelegt — siehe Tab „Läden“."));
+  wrap.appendChild(storeRow);
+
+  const inputRow = el("div", { style: "display:flex; gap:9px; margin-bottom:20px;" });
+  const manualInput = el("input", { class: "field-input", style: "margin-bottom:0; flex:1; width:auto;", placeholder: "Eigenen Eintrag hinzufügen" });
+  const submit = async () => {
+    const v = manualInput.value.trim();
+    if (!v) return;
+    if (!state.shoppingListId) { await ensureWeekPlan(); }
+    manualInput.value = "";
+    await addManualItem(v);
+  };
+  manualInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); submit(); } });
+  inputRow.appendChild(manualInput);
+  inputRow.appendChild(el("button", {
+    type: "button", style: "width:46px; flex-shrink:0; padding:0; border:none; border-radius:14px; display:flex; align-items:center; justify-content:center; background:" + (state.voiceListening ? "var(--danger)" : "var(--bg-subtle)") + "; color:" + (state.voiceListening ? "#fff" : "var(--ink-muted)") + ";",
+    title: "Zutaten diktieren",
+    onclick: startVoiceInput,
+  }, icon("mic")));
+  inputRow.appendChild(el("button", { type: "button", class: "btn-primary", style: "width:46px; flex-shrink:0; padding:0;", onclick: submit }, icon("plus")));
+  wrap.appendChild(inputRow);
+  if (state.voiceListening) wrap.appendChild(el("div", { style: "display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--danger); font-weight:600; margin:-12px 0 16px;" }, [
+    el("div", { style: "width:8px; height:8px; border-radius:50%; background:var(--danger); animation:pulse 1s infinite;" }),
+    el("span", {}, "Hört zu … jetzt Zutat(en) sagen"),
+  ]));
+
+  const uncategorized = state.manualItems.filter((m) => !m.category);
+  if (uncategorized.length) {
+    wrap.appendChild(el("div", { class: "section-label" }, "Kategorie wählen"));
+    const card = el("div", { class: "card", style: "margin-bottom:22px;" });
+    uncategorized.forEach((item) => {
+      const row = el("div", { style: "padding:13px 15px; border-top:1px solid var(--line);" });
+      row.appendChild(el("div", { style: "display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;" }, [
+        el("span", { style: "font-size:14px; font-weight:600;" }, item.custom_name),
+        el("button", { class: "icon-btn", onclick: () => removeManualItem(item.id) }, icon("x")),
+      ]));
+      const catRow = el("div", { style: "display:flex; gap:6px; flex-wrap:wrap;" });
+      CATEGORY_ORDER.forEach((cat) => catRow.appendChild(el("button", { class: "pill subtle", onclick: () => setManualCategory(item.id, cat) }, cat)));
+      row.appendChild(catRow);
+      card.appendChild(row);
+    });
+    wrap.appendChild(card);
+  }
+
+  if (totalCount === 0) wrap.appendChild(el("div", { style: "color:var(--ink-soft); font-size:14px; padding:10px 2px;" }, "Noch keine Rezepte im Wochenplan — die Liste füllt sich automatisch, sobald ihr plant."));
+
+  const activeStore = state.stores.find((s) => s.name === state.store);
+  const routeOrder = activeStore ? activeStore.category_order : CATEGORY_ORDER;
+  const grouped = {};
+  CATEGORY_ORDER.forEach((c) => (grouped[c] = []));
+  Object.entries(generated).forEach(([id, g]) => grouped[g.category || "Sonstiges"].push({ id, ...g, removable: false }));
+  state.manualItems.filter((m) => m.category).forEach((m) => grouped[m.category].push({ id: m.id, name: m.custom_name, amount: null, unit: null, favorite: false, removable: true, checked: m.is_checked }));
+
+  routeOrder.filter((c) => grouped[c].length).forEach((cat) => {
+    wrap.appendChild(el("div", { class: "section-label" }, cat));
+    const card = el("div", { class: "card", style: "margin-bottom:22px;" });
+    grouped[cat].forEach((item) => {
+      const isManual = item.removable;
+      const checked = isManual ? item.checked : !!state.checkedRecipeItems[item.id];
+      const row = el("div", { class: "list-item" });
+      row.appendChild(el("button", {
+        class: "checkbox" + (checked ? " checked" : ""),
+        onclick: () => { isManual ? toggleManualChecked(item.id) : (state.checkedRecipeItems[item.id] = !state.checkedRecipeItems[item.id], renderTabOnly()); },
+      }, checked ? icon("check") : ""));
+      const label = el("div", { style: "flex:1; font-size:14px; cursor:pointer;" + (checked ? "color:var(--ink-muted); text-decoration:line-through;" : "") }, item.name);
+      label.addEventListener("click", () => { isManual ? toggleManualChecked(item.id) : (state.checkedRecipeItems[item.id] = !state.checkedRecipeItems[item.id], renderTabOnly()); });
+      if (item.favorite && !item.amount) label.appendChild(el("span", { style: "margin-left:7px; font-size:11px; color:var(--accent); font-weight:600;" }, "★ Favorit"));
+      row.appendChild(label);
+      if (item.amount) row.appendChild(el("div", { style: "font-size:12.5px; color:var(--ink-soft);" }, item.amount + " " + item.unit));
+      if (isManual) row.appendChild(el("button", { class: "icon-btn", onclick: () => removeManualItem(item.id) }, icon("x")));
+      card.appendChild(row);
+    });
+    wrap.appendChild(card);
+  });
+
+  return wrap;
+}
+
+// ============ Läden Tab ============
+async function persistStoreOrder(store) {
+  try { await sb(`stores?id=eq.${store.id}`, { method: "PATCH", body: { category_order: store.category_order } }); }
+  catch (e) { alert("Fehler beim Speichern der Reihenfolge: " + e.message); }
+}
+function moveCategory(store, index, direction) {
+  const newIndex = index + direction;
+  if (newIndex < 0 || newIndex >= store.category_order.length) return;
+  const arr = store.category_order;
+  [arr[index], arr[newIndex]] = [arr[newIndex], arr[index]];
+  render();
+  persistStoreOrder(store);
+}
+async function addStore() {
+  const name = state.newStoreName.trim();
+  if (!name) return;
+  try {
+    const created = await sb("stores", { method: "POST", body: { household_id: HOUSEHOLD_ID, name, category_order: [...CATEGORY_ORDER] } });
+    state.stores.push(created[0]);
+    state.stores.sort((a, b) => a.name.localeCompare(b.name));
+    state.newStoreName = "";
+    render();
+  } catch (e) { alert("Fehler: " + e.message + " (existiert der Laden vielleicht schon?)"); }
+}
+async function deleteStore(store) {
+  askConfirm(`Laden „${store.name}“ wirklich entfernen?`, async () => {
+    try {
+      await sb(`stores?id=eq.${store.id}`, { method: "DELETE" });
+      state.stores = state.stores.filter((s) => s.id !== store.id);
+      if (state.store === store.name && state.stores.length) state.store = state.stores[0].name;
+      render();
+    } catch (e) { alert("Fehler: " + e.message); }
+  });
+}
+
+function StoresTab() {
+  const wrap = el("div", { class: "top-pad" });
+  wrap.appendChild(el("h1", { class: "page-title" }, "Läden"));
+  wrap.appendChild(el("p", { class: "subtitle" }, "Reihenfolge der Abteilungen je Laden — per Pfeil oder Ziehen anpassen."));
+
+  const inputRow = el("div", { style: "display:flex; gap:9px; margin-bottom:26px;" });
+  const nameInput = el("input", { class: "field-input", style: "margin-bottom:0; flex:1; width:auto;", placeholder: "Neuen Laden hinzufügen", value: state.newStoreName });
+  nameInput.addEventListener("input", (e) => (state.newStoreName = e.target.value));
+  nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addStore(); } });
+  inputRow.appendChild(nameInput);
+  inputRow.appendChild(el("button", { type: "button", class: "btn-primary", style: "width:46px; flex-shrink:0; padding:0;", onclick: addStore }, icon("plus")));
+  wrap.appendChild(inputRow);
+
+  if (!state.stores.length) wrap.appendChild(el("div", { style: "color:var(--ink-soft); font-size:14px; padding:10px 2px;" }, "Noch kein Laden angelegt."));
+
+  state.stores.forEach((store) => {
+    wrap.appendChild(el("div", { style: "display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;" }, [
+      el("div", { class: "section-label", style: "margin-bottom:0;" }, store.name),
+      el("button", { type: "button", class: "icon-btn", onclick: () => deleteStore(store) }, icon("trash")),
+    ]));
+    const card = el("div", { class: "card", style: "margin-bottom:24px;" });
+    store.category_order.forEach((cat, idx) => {
+      const row = el("div", {
+        class: "list-item", draggable: "true",
+        style: "cursor:grab; gap:10px;",
+      });
+      row.addEventListener("dragstart", (e) => { state.dragCategoryFrom = { storeId: store.id, index: idx }; e.dataTransfer.effectAllowed = "move"; });
+      row.addEventListener("dragover", (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; });
+      row.addEventListener("drop", (e) => {
+        e.preventDefault();
+        const from = state.dragCategoryFrom;
+        if (!from || from.storeId !== store.id || from.index === idx) return;
+        const arr = store.category_order;
+        const [moved] = arr.splice(from.index, 1);
+        arr.splice(idx, 0, moved);
+        state.dragCategoryFrom = null;
+        render();
+        persistStoreOrder(store);
+      });
+      row.appendChild(el("span", { style: "color:var(--ink-muted); display:flex;" }, icon("grip")));
+      row.appendChild(el("span", { style: "flex:1; font-size:14px; font-weight:600;" }, (idx + 1) + ". " + cat));
+      row.appendChild(el("button", { type: "button", class: "icon-btn", onclick: () => moveCategory(store, idx, -1) }, icon("up")));
+      row.appendChild(el("button", { type: "button", class: "icon-btn", onclick: () => moveCategory(store, idx, 1) }, icon("down")));
+      card.appendChild(row);
+    });
+    wrap.appendChild(card);
+  });
+
+  return wrap;
+}
+
+// ============ Zutaten Tab ============
+async function deleteIngredient(ing) {
+  askConfirm(`Zutat „${ing.name}“ wirklich löschen? Rezepte, die sie verwenden, verlieren diese Zutat.`, async () => {
+    try {
+      await sb(`ingredients?id=eq.${ing.id}`, { method: "DELETE" });
+      state.ingredients = state.ingredients.filter((i) => i.id !== ing.id);
+      render();
+    } catch (e) { alert("Fehler beim Löschen (wird die Zutat evtl. noch in einem Rezept verwendet?): " + e.message); }
+  });
+}
+
+function IngredientsTab() {
+  const wrap = el("div", { class: "top-pad" });
+  wrap.appendChild(el("h1", { class: "page-title" }, "Zutaten"));
+  wrap.appendChild(el("p", { class: "subtitle" }, state.ingredients.length + " Zutaten in der Stammdatenliste"));
+  wrap.appendChild(el("p", { style: "font-size:11.5px; color:var(--ink-muted); margin:-10px 0 16px; display:flex; align-items:center; gap:14px;" }, [
+    el("span", { style: "display:flex; align-items:center; gap:4px;" }, [el("span", { html: "★" }), el("span", {}, "Favorit — immer auf der Liste")]),
+    el("span", { style: "display:flex; align-items:center; gap:4px;" }, [icon("pantry"), el("span", {}, "Vorrat — nie auf der Liste")]),
+  ]));
+
+  wrap.appendChild(el("button", {
+    type: "button", class: "btn-primary", style: "margin-bottom:20px;",
+    onclick: () => { state.showAddIngredient = true; state.editingIngredientId = null; state.newIngredientDraft = null; render(); },
+  }, [icon("plus"), el("span", { style: "margin-left:6px;" }, "Neue Zutat")]));
+
+  CATEGORY_ORDER.forEach((cat) => {
+    const inCat = state.ingredients.filter((i) => i.category === cat);
+    if (!inCat.length) return;
+    wrap.appendChild(el("div", { class: "section-label" }, cat));
+    const card = el("div", { class: "card", style: "margin-bottom:22px;" });
+    inCat.forEach((ing) => {
+      const row = el("div", { class: "list-item" });
+      row.appendChild(el("button", {
+        type: "button", class: "icon-btn", style: "color:" + (ing.is_favorite ? "var(--accent)" : "var(--ink-muted)") + ";",
+        title: ing.is_favorite ? "Favorit entfernen" : "Als Favorit markieren",
+        onclick: async () => {
+          const newVal = !ing.is_favorite;
+          try {
+            await sb(`ingredients?id=eq.${ing.id}`, { method: "PATCH", body: { is_favorite: newVal } });
+            ing.is_favorite = newVal;
+            render();
+          } catch (e) { alert("Fehler: " + e.message); }
+        },
+      }, el("span", { html: ing.is_favorite ? "★" : "☆", style: "font-size:17px; line-height:1;" })));
+      row.appendChild(el("button", {
+        type: "button", class: "icon-btn",
+        style: "color:" + (state.pantryIngredientIds.has(ing.id) ? "var(--accent)" : "var(--ink-muted)") + "; background:" + (state.pantryIngredientIds.has(ing.id) ? "var(--accent-soft)" : "transparent") + "; border-radius:8px;",
+        title: state.pantryIngredientIds.has(ing.id) ? "Aus Vorrat entfernen" : "Auf Vorrat markieren (wird von der Einkaufsliste weggelassen)",
+        onclick: async () => {
+          const inPantry = state.pantryIngredientIds.has(ing.id);
+          try {
+            if (inPantry) {
+              await sb(`pantry_items?household_id=eq.${HOUSEHOLD_ID}&ingredient_id=eq.${ing.id}`, { method: "DELETE" });
+              state.pantryIngredientIds.delete(ing.id);
+            } else {
+              await sb("pantry_items", { method: "POST", body: { household_id: HOUSEHOLD_ID, ingredient_id: ing.id } });
+              state.pantryIngredientIds.add(ing.id);
+            }
+            render();
+          } catch (e) { alert("Fehler: " + e.message); }
+        },
+      }, icon("pantry")));
+      const label = el("div", { style: "flex:1; font-size:14px; cursor:pointer;" });
+      label.appendChild(document.createTextNode(ing.name));
+      label.addEventListener("click", () => {
+        state.editingIngredientId = ing.id;
+        state.newIngredientDraft = { name: ing.name, category: ing.category, unit: ing.unit, typical_package_size: ing.typical_package_size || "", is_favorite: ing.is_favorite };
+        state.showAddIngredient = true;
+        render();
+      });
+      row.appendChild(label);
+      row.appendChild(el("span", { style: "font-size:12.5px; color:var(--ink-soft);" }, (ing.typical_package_size ? ing.typical_package_size + " " + ing.unit : ing.unit)));
+      row.appendChild(el("button", { type: "button", class: "icon-btn", onclick: () => deleteIngredient(ing) }, icon("trash")));
+      card.appendChild(row);
+    });
+    wrap.appendChild(card);
+  });
+
+  return wrap;
+}
+
+// ============ App Shell ============
+function renderTabOnly() { render(); } // einfache Variante: komplettes Neu-Rendern
+
+function App() {
+  if (!state.session) return AuthScreen();
+  if (state.loading) return el("div", {}, el("div", { class: "spinner" }));
+  if (state.cookMode) return CookModeView();
+
+  const container = el("div");
+  const openRecipe = state.openRecipeId ? state.recipes.find((r) => r.id === state.openRecipeId) : null;
+
+  if (openRecipe) {
+    container.appendChild(RecipeDetail(openRecipe));
+  } else {
+    if (state.tab === "recipes") container.appendChild(RecipesTab());
+    if (state.tab === "plan") container.appendChild(WeekPlanTab());
+    if (state.tab === "list") container.appendChild(ShoppingListTab());
+    if (state.tab === "stores") container.appendChild(StoresTab());
+    if (state.tab === "ingredients") container.appendChild(IngredientsTab());
+
+    const nav = el("div", { class: "bottom-nav" });
+    [["recipes", "book", "Rezepte"], ["plan", "calendar", "Wochenplan"], ["list", "basket", "Einkauf"], ["ingredients", "leaf", "Zutaten"], ["stores", "store", "Läden"]].forEach(([key, ic, label]) => {
+      nav.appendChild(el("button", { class: "nav-btn" + (state.tab === key ? " active" : ""), onclick: () => { state.tab = key; render(); } }, [icon(ic), el("span", {}, label)]));
+    });
+    container.appendChild(nav);
+  }
+
+  if (state.showAddRecipe) container.appendChild(AddRecipeModal());
+  if (state.showImportRecipe) container.appendChild(ImportRecipeModal());
+  if (state.showAddIngredient && !state.showAddRecipe) container.appendChild(AddIngredientModal(null));
+  if (state.showDayPicker) container.appendChild(DayPickerModal(state.showDayPicker));
+  if (state.showWeekPicker) container.appendChild(WeekPickerModal(state.showWeekPicker));
+  if (state.confirmDialog) container.appendChild(ConfirmModal());
+
+  return container;
+}
+
+render();
+
+state.pendingSharedUrl = extractSharedUrl();
+if (state.pendingSharedUrl && state.session) processSharedUrlIfAny();
+
+setInterval(() => {
+  if (state.session && state.session.refresh_token) refreshSession().catch(() => {});
+}, 45 * 60 * 1000);
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch((e) => console.warn("Service Worker Registrierung fehlgeschlagen:", e));
+  });
+}
+</script>
+</body>
+</html>

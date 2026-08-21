@@ -1793,8 +1793,8 @@ function startVoiceInput() {
   const recognition = new SpeechRecognitionCtor();
   activeVoiceRecognition = recognition;
   recognition.lang = "de-DE";
-  recognition.continuous = true; // laeuft weiter, bis manuell gestoppt -- jede Sprechpause liefert ein eigenes Ergebnis
-  recognition.interimResults = false;
+  recognition.continuous = true;
+  recognition.interimResults = true; // noetig, um Sprechpausen selbst zu erkennen (manche Browser "finalisieren" sonst erst beim Stoppen)
 
   // Sicherheitsnetz: falls die Erkennung gar nicht erst startet (z.B. haengende Berechtigungsabfrage),
   // nach einigen Sekunden automatisch zuruecksetzen statt die Seite "haengen" zu lassen.
@@ -1808,22 +1808,49 @@ function startVoiceInput() {
     alert("Die Spracheingabe hat nicht reagiert. Auf dem iPhone hilft es oft, die Seite direkt in Safari statt der installierten App zu öffnen.");
   }, 8000);
 
+  // Eigene Pausenerkennung: manche Browser liefern bei "continuous" nie ein finales Zwischenergebnis,
+  // sondern haengen alles an EINEN wachsenden Text -- daher selbst per kurzer Sprechpause (Stille)
+  // in einzelne Zutaten auftrennen, statt uns auf das Browser-Verhalten zu verlassen.
+  let currentResultIndex = -1;
+  let committedLength = 0;
+  let pendingFull = "";
+  let pauseTimer = null;
+
+  const commitPending = () => {
+    if (pauseTimer) { clearTimeout(pauseTimer); pauseTimer = null; }
+    const delta = pendingFull.slice(committedLength).trim();
+    committedLength = pendingFull.length;
+    if (delta) {
+      const parts = delta.split(/,| und /i).map((s) => s.trim()).filter(Boolean);
+      parts.forEach((part) => addManualItem(part.charAt(0).toUpperCase() + part.slice(1)));
+    }
+  };
+
   recognition.onstart = () => { started = true; clearTimeout(startTimeout); state.voiceListening = true; render(); };
-  recognition.onend = () => { state.voiceListening = false; activeVoiceRecognition = null; render(); };
+  recognition.onend = () => {
+    commitPending(); // letztes Wort nicht verlieren, falls vor dem Stoppen keine volle Pause erkannt wurde
+    state.voiceListening = false; activeVoiceRecognition = null; render();
+  };
   recognition.onerror = (e) => {
     clearTimeout(startTimeout);
+    if (pauseTimer) clearTimeout(pauseTimer);
     state.voiceListening = false; activeVoiceRecognition = null; render();
     if (e.error === "not-allowed" || e.error === "service-not-allowed") alert("Zugriff aufs Mikrofon wurde nicht erlaubt. Bitte in den Geräte-Einstellungen für den Browser freigeben.");
     else if (e.error !== "no-speech" && e.error !== "aborted") alert("Spracheingabe-Fehler: " + e.error);
   };
   recognition.onresult = (e) => {
-    // Jedes fertige Ergebnis (= eine erkannte Sprechpause) wird als eigene Zutat behandelt.
-    // Falls trotzdem "und"/Komma in einem Ergebnis stecken, zur Sicherheit zusaetzlich auftrennen.
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      if (!e.results[i].isFinal) continue;
-      const transcript = e.results[i][0].transcript;
-      const parts = transcript.split(/,| und /i).map((s) => s.trim()).filter(Boolean);
-      parts.forEach((part) => addManualItem(part.charAt(0).toUpperCase() + part.slice(1)));
+    const idx = e.results.length - 1;
+    const result = e.results[idx];
+    const transcript = result[0].transcript;
+    if (idx !== currentResultIndex) { currentResultIndex = idx; committedLength = 0; }
+    pendingFull = transcript;
+    if (pauseTimer) clearTimeout(pauseTimer);
+    if (result.isFinal) {
+      commitPending();
+      currentResultIndex = -1;
+    } else {
+      // ~1,1 Sekunden ohne neue Worte = eine Sprechpause -> als eigene Zutat werten
+      pauseTimer = setTimeout(commitPending, 1100);
     }
   };
 

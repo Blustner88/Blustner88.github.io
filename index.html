@@ -1331,6 +1331,7 @@ async function toggleDayForRecipe(recipeId, day) {
 
 // ============ Kochmodus ============
 let wakeLockSentinel = null;
+let activeVoiceRecognition = null;
 let cookTimerInterval = null;
 
 async function startCookMode(recipe) {
@@ -1771,6 +1772,12 @@ async function addManualItem(name) {
 }
 
 function startVoiceInput() {
+  // Erneutes Antippen waehrend des Zuhoerens = manuell stoppen
+  if (state.voiceListening && activeVoiceRecognition) {
+    try { activeVoiceRecognition.stop(); } catch (e) {}
+    return;
+  }
+
   const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognitionCtor) {
     alert("Spracheingabe wird auf diesem Gerät/Browser leider nicht unterstützt. Auf dem iPhone hilft es manchmal, die Seite direkt in Safari statt der installierten App zu öffnen.");
@@ -1784,40 +1791,43 @@ function startVoiceInput() {
   }
 
   const recognition = new SpeechRecognitionCtor();
+  activeVoiceRecognition = recognition;
   recognition.lang = "de-DE";
-  recognition.continuous = false;
+  recognition.continuous = true; // laeuft weiter, bis manuell gestoppt -- jede Sprechpause liefert ein eigenes Ergebnis
   recognition.interimResults = false;
 
-  // Sicherheitsnetz: falls die Erkennung (z.B. wegen einer nicht erscheinenden System-Berechtigungsabfrage)
-  // gar nicht reagiert, nach einigen Sekunden automatisch zuruecksetzen statt die Seite "haengen" zu lassen.
-  let settled = false;
-  const safetyTimeout = setTimeout(() => {
-    if (settled) return;
-    settled = true;
+  // Sicherheitsnetz: falls die Erkennung gar nicht erst startet (z.B. haengende Berechtigungsabfrage),
+  // nach einigen Sekunden automatisch zuruecksetzen statt die Seite "haengen" zu lassen.
+  let started = false;
+  const startTimeout = setTimeout(() => {
+    if (started) return;
     state.voiceListening = false;
+    activeVoiceRecognition = null;
     render();
     try { recognition.abort(); } catch (e) {}
     alert("Die Spracheingabe hat nicht reagiert. Auf dem iPhone hilft es oft, die Seite direkt in Safari statt der installierten App zu öffnen.");
   }, 8000);
-  const markSettled = () => { settled = true; clearTimeout(safetyTimeout); };
 
-  recognition.onstart = () => { state.voiceListening = true; render(); };
-  recognition.onend = () => { markSettled(); state.voiceListening = false; render(); };
+  recognition.onstart = () => { started = true; clearTimeout(startTimeout); state.voiceListening = true; render(); };
+  recognition.onend = () => { state.voiceListening = false; activeVoiceRecognition = null; render(); };
   recognition.onerror = (e) => {
-    markSettled();
-    state.voiceListening = false; render();
+    clearTimeout(startTimeout);
+    state.voiceListening = false; activeVoiceRecognition = null; render();
     if (e.error === "not-allowed" || e.error === "service-not-allowed") alert("Zugriff aufs Mikrofon wurde nicht erlaubt. Bitte in den Geräte-Einstellungen für den Browser freigeben.");
     else if (e.error !== "no-speech" && e.error !== "aborted") alert("Spracheingabe-Fehler: " + e.error);
   };
   recognition.onresult = (e) => {
-    markSettled();
-    const transcript = e.results[0][0].transcript;
-    // Bei "Zwiebeln und Tomaten und Käse" o.ä. in einzelne Eintraege auftrennen
-    const parts = transcript.split(/,| und /i).map((s) => s.trim()).filter(Boolean);
-    parts.forEach((part) => addManualItem(part.charAt(0).toUpperCase() + part.slice(1)));
+    // Jedes fertige Ergebnis (= eine erkannte Sprechpause) wird als eigene Zutat behandelt.
+    // Falls trotzdem "und"/Komma in einem Ergebnis stecken, zur Sicherheit zusaetzlich auftrennen.
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (!e.results[i].isFinal) continue;
+      const transcript = e.results[i][0].transcript;
+      const parts = transcript.split(/,| und /i).map((s) => s.trim()).filter(Boolean);
+      parts.forEach((part) => addManualItem(part.charAt(0).toUpperCase() + part.slice(1)));
+    }
   };
 
-  try { recognition.start(); } catch (e) { markSettled(); state.voiceListening = false; }
+  try { recognition.start(); } catch (e) { clearTimeout(startTimeout); state.voiceListening = false; activeVoiceRecognition = null; }
 }
 async function setManualCategory(id, category) {
   try { await sb(`shopping_list_items?id=eq.${id}`, { method: "PATCH", body: { category } }); const it = state.manualItems.find((m) => m.id === id); it.category = category; render(); }
@@ -1878,7 +1888,7 @@ function ShoppingListTab() {
   wrap.appendChild(inputRow);
   if (state.voiceListening) wrap.appendChild(el("div", { style: "display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--danger); font-weight:600; margin:-12px 0 16px;" }, [
     el("div", { style: "width:8px; height:8px; border-radius:50%; background:var(--danger); animation:pulse 1s infinite;" }),
-    el("span", {}, "Hört zu … jetzt Zutat(en) sagen"),
+    el("span", {}, "Hört zu … Zutaten nacheinander sagen, kurz pausieren. Erneut antippen zum Stoppen."),
   ]));
 
   const uncategorized = state.manualItems.filter((m) => !m.category);
